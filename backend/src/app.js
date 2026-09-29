@@ -1,11 +1,13 @@
 const express = require('express');
-const healthRoutes = require('./routes/health.routes');
+//const healthRoutes = require('./routes/health.routes');
+const authRoutes = require('./routes/auth.routes');
 
 const app = express();
 
 app.use(express.json());
 
 // Usar la ruta de health
-app.use('/api', healthRoutes);
+//app.use('/api', healthRoutes);
+app.use('/api/auth', authRoutes);
 
 module.exports = app;
