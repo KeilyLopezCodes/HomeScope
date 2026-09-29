@@ -1,13 +1,11 @@
-const express = require("express");
-require("dotenv").config();
+const express = require('express');
+const healthRoutes = require('./routes/health.routes');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-app.get("/", (req, res) => {
-    res.json({ message: "Hola Mundo desde HomeScope"});
-});
+app.use(express.json());
 
-app.listen(PORT, () => {
-    console.log(`HomeScope API corriendo en http://localhost:${PORT}`);
-});
+// Usar la ruta de health
+app.use('/api', healthRoutes);
+
+module.exports = app;
