@@ -1,9 +1,7 @@
+const { PrismaPg } = require('@prisma/adapter-pg');
 const { PrismaClient } = require('@prisma/client');
 
-const prisma = new PrismaClient();
-
-prisma.$connect()
-  .then(() => console.log('Conexión exitosa a PostgreSQL mediante Prisma ORM'))
-  .catch((err) => console.error('Error de conexión:', err));
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const prisma = new PrismaClient({ adapter });
 
 module.exports = prisma;
