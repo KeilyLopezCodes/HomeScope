@@ -39,3 +39,25 @@ const verifyEmail = async (req, res) => {
 };
 
 module.exports = { register, login, updateProfile, verifyEmail };
+
+const forgotPassword = async (req, res) => {
+  try {
+    await authService.forgotPassword(req.body.email);
+    res.json({ success: true, message: 'Si el correo está registrado, te enviamos un link para recuperar tu contraseña.' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+ 
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    await authService.resetPassword(token, password);
+    res.json({ success: true, message: 'Contraseña actualizada correctamente.' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+ 
+module.exports = { register, login, updateProfile, verifyEmail, forgotPassword, resetPassword };
