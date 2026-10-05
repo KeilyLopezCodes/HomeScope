@@ -130,3 +130,60 @@ const verifyEmail = async (token) => {
 };
 
 module.exports = { registerUser, loginUser, updateUserProfile, verifyEmail };
+
+const forgotPassword = async (email) => {
+  if (!email) throw new Error('Escribe tu correo electrónico');
+ 
+  const user = await prisma.usuario.findUnique({ where: { correo: email } });
+  // Si no existe NO lanzamos error: así nadie puede averiguar qué correos están registrados.
+  if (!user) return;
+ 
+  // El token se firma con JWT_SECRET + el hash actual de la contraseña.
+  // Cuando la contraseña cambia, el hash cambia y el link anterior deja de servir (un solo uso).
+  const token = jwt.sign({ id: user.id, tipo: 'reset' }, JWT_SECRET + user.password_hash, {
+    expiresIn: '15m',
+  });
+ 
+  const resetUrl = `${FRONTEND_URL}/nueva-password?token=${token}`;
+  await transporter.sendMail({
+    from: '"HomeScope Support" <no-reply@homescope.com>',
+    to: email,
+    subject: 'Recupera tu contraseña de HomeScope',
+    html: `<p>Hola ${user.nombre}, haz clic en el link para crear una nueva contraseña. Es válido por 15 minutos:</p><a href="${resetUrl}">${resetUrl}</a><p>Si no lo pediste tú, ignora este correo.</p>`,
+  });
+};
+ 
+const resetPassword = async (token, newPassword) => {
+  if (!newPassword || newPassword.length < 8) {
+    throw new Error('La contraseña debe tener al menos 8 caracteres');
+  }
+ 
+  const invalido = new Error('El link es inválido o ya expiró');
+  const decoded = jwt.decode(token);
+  if (!decoded || decoded.tipo !== 'reset' || !decoded.id) throw invalido;
+ 
+  const user = await prisma.usuario.findUnique({ where: { id: decoded.id } });
+  if (!user) throw invalido;
+ 
+  try {
+    jwt.verify(token, JWT_SECRET + user.password_hash);
+  } catch {
+    throw invalido;
+  }
+ 
+  const hashed = await bcrypt.hash(newPassword, 10);
+  await prisma.usuario.update({
+    where: { id: user.id },
+    data: { password_hash: hashed },
+  });
+};
+ 
+module.exports = {
+  registerUser,
+  loginUser,
+  updateUserProfile,
+  verifyEmail,
+  forgotPassword,
+  resetPassword,
+};
+ 
