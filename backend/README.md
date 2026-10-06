@@ -157,15 +157,6 @@ Debes recibir una respuesta exitosa confirmando el estado de la API y el conteo 
 
 ```
 
-### Explorador Visual de Datos (Prisma Studio)
-
-Para explorar las 22 tablas y registros mediante una interfaz web interactiva, ejecuta:
-
-```bash
-npx prisma@5 studio
-
-```
-
 ---
 
 ## Dependencias y Scripts del Backend
@@ -197,7 +188,15 @@ npm install express
 ### Instalación de Prisma ORM
 
 ```bash
-npm install @prisma/client@5.22.0
+npm install prisma@7.10.0 @prisma/client@7.10.0 --save-exact
+
+```
+
+### Adaptador de Prisma para PostgreSQL
+
+Adaptador de Prisma para PostgreSQL y librería para el hasheo seguro de contraseñas mediante algoritmos de encriptación.
+```bash
+npm install @prisma/adapter-pg bcryptjs
 
 ```
 
