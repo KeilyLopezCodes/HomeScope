@@ -1,16 +1,9 @@
+const propertyRepository = require('../repositories/property.repository');
+const priceHistoryRepository = require('../repositories/priceHistory.repository');
 const prisma = require('../config/db');
 
 // Estados válidos según el flujo del formulario por pasos
 const ESTADOS_VALIDOS = ['borrador', 'publicado', 'pausado', 'vendido', 'alquilado', 'no_disponible'];
-
-// Campos que el usuario puede modificar (whitelist)
-const CAMPOS_EDITABLES = [
-  'titulo', 'descripcion', 'modalidad', 'precio', 'moneda',
-  'habitaciones', 'banos', 'area_m2', 'parqueos',
-  'direccion', 'zona', 'municipio', 'departamento',
-  'latitud', 'longitud', 'google_place_id',
-  'tipo_propiedad_id', 'paso_formulario'
-];
 
 // 1. Crear una nueva propiedad
 const createProperty = async (userId, propertyData) => {
@@ -35,8 +28,8 @@ const createProperty = async (userId, propertyData) => {
   } = propertyData;
 
   const numParqueos = parqueos !== undefined 
-    ? parseInt(parqueos) 
-    : (estacionamientos ? parseInt(estacionamientos) : 0);
+    ? parseInt(parqueos, 10) 
+    : (estacionamientos ? parseInt(estacionamientos, 10) : 0);
 
   return await prisma.propiedad.create({
     data: {
@@ -45,7 +38,7 @@ const createProperty = async (userId, propertyData) => {
       precio: parseFloat(precio),
       moneda: moneda || 'USD',
       modalidad: modalidad || 'VENTA',
-      habitaciones: habitaciones ? parseInt(habitaciones) : 0,
+      habitaciones: habitaciones ? parseInt(habitaciones, 10) : 0,
       banos: banos ? parseFloat(banos) : 0,
       parqueos: numParqueos,
       area_m2: area_m2 ? parseFloat(area_m2) : 0,
@@ -56,23 +49,20 @@ const createProperty = async (userId, propertyData) => {
       latitud: latitud ? parseFloat(latitud) : 0,
       longitud: longitud ? parseFloat(longitud) : 0,
       estado: 'borrador',
-      // Mapeo a las llaves foráneas según tu esquema real:
       vendedor_id: userId,
-      tipo_propiedad_id: tipo_propiedad_id ? parseInt(tipo_propiedad_id) : 1
+      tipo_propiedad_id: tipo_propiedad_id ? parseInt(tipo_propiedad_id, 10) : 1
     }
   });
 };
 
 // 2. Listar propiedades publicadas (público)
-// Obtener propiedades con paginación y filtro por estado
 const getAllProperties = async (query = {}) => {
   const page = parseInt(query.page, 10) || 1;
   const limit = parseInt(query.limit, 10) || 10;
-  const estado = query.estado || 'publicado'; // Por defecto solo públicas
+  const estado = query.estado || 'publicado';
 
   const skip = (page - 1) * limit;
 
-  // 1. Obtener los registros paginados
   const properties = await prisma.propiedad.findMany({
     where: { estado },
     skip: skip,
@@ -85,12 +75,8 @@ const getAllProperties = async (query = {}) => {
     orderBy: { fecha_creacion: 'desc' }
   });
 
-  // 2. Contar el total de elementos que coinciden con el filtro
-  const totalItems = await prisma.propiedad.count({
-    where: { estado }
-  });
+  const totalItems = await prisma.propiedad.count({ where: { estado } });
 
-  // 3. Devolver datos junto con los metadatos de paginación
   return {
     properties,
     pagination: {
@@ -105,7 +91,7 @@ const getAllProperties = async (query = {}) => {
 // Listar mis propiedades (Panel del Vendedor)
 const getMyProperties = async (userId) => {
   return await prisma.propiedad.findMany({
-    where: { vendedor_id: parseInt(userId) },
+    where: { vendedor_id: parseInt(userId, 10) },
     include: {
       tipo_propiedad: true,
       foto_propiedad: true
@@ -117,7 +103,7 @@ const getMyProperties = async (userId) => {
 // 3. Obtener por ID
 const getPropertyById = async (id) => {
   const property = await prisma.propiedad.findUnique({
-    where: { id: parseInt(id) },
+    where: { id: parseInt(id, 10) },
     include: {
       usuario: { select: { id: true, nombre: true, apellido: true, correo: true, telefono: true } },
       tipo_propiedad: true,
@@ -130,52 +116,31 @@ const getPropertyById = async (id) => {
   return property;
 };
 
-// 4. Actualizar (solo dueño)
-const updateProperty = async (propertyId, userId, updateData) => {
-  const property = await prisma.propiedad.findUnique({
-    where: { id: parseInt(propertyId) }
-  });
-  if (!property) throw new Error('Propiedad no encontrada');
-  if (property.vendedor_id !== userId) throw new Error('No tienes permisos para modificar esta propiedad');
-  
-  const dataFiltrada = {};
-  for (const campo of CAMPOS_EDITABLES) {
-    if (updateData[campo] !== undefined) {
-      dataFiltrada[campo] = updateData[campo];
-    }
+// 4. Actualizar (con Repositorios e Historial de Precio para T14)
+const updateProperty = async (idProperty, data, userId) => {
+  const currentProperty = await propertyRepository.findById(idProperty);
+  if (!currentProperty) {
+    throw new Error('Propiedad no encontrada');
   }
 
-  // Conversión de tipos
-  if (dataFiltrada.precio !== undefined) dataFiltrada.precio = parseFloat(dataFiltrada.precio);
-  if (dataFiltrada.habitaciones !== undefined) dataFiltrada.habitaciones = parseInt(dataFiltrada.habitaciones);
-  if (dataFiltrada.banos !== undefined) dataFiltrada.banos = parseFloat(dataFiltrada.banos);
-  if (dataFiltrada.area_m2 !== undefined) dataFiltrada.area_m2 = parseFloat(dataFiltrada.area_m2);
-  if (dataFiltrada.parqueos !== undefined) dataFiltrada.parqueos = parseInt(dataFiltrada.parqueos);
-  if (dataFiltrada.latitud !== undefined) dataFiltrada.latitud = parseFloat(dataFiltrada.latitud);
-  if (dataFiltrada.longitud !== undefined) dataFiltrada.longitud = parseFloat(dataFiltrada.longitud);
-  if (dataFiltrada.tipo_propiedad_id !== undefined) dataFiltrada.tipo_propiedad_id = parseInt(dataFiltrada.tipo_propiedad_id);
-  if (dataFiltrada.paso_formulario !== undefined) dataFiltrada.paso_formulario = parseInt(dataFiltrada.paso_formulario);
+  // Registrar cambio de precio en el historial si el monto varió
+  if (data.precio && Number(data.precio) !== Number(currentProperty.precio)) {
+    await priceHistoryRepository.createHistoryRecord({
+      propiedadId: idProperty,
+      precioAnterior: currentProperty.precio,
+      precioNuevo: data.precio,
+      cambiadoPor: userId
+    });
+  }
 
-  // Registrar cambio de precio si aplica (para T14)
-if (dataFiltrada.precio !== undefined && parseFloat(dataFiltrada.precio) !== parseFloat(property.precio)) {
-  await prisma.historial_precio.create({
-    data: {
-      precio_anterior: property.precio,
-      precio_nuevo: parseFloat(dataFiltrada.precio),
-      propiedad: {
-        connect: { id: parseInt(propertyId) }
-      },
-      usuario: {
-        connect: { id: parseInt(userId) }
-      }
-    }
-  });
-}
+  // Actualizar datos de la propiedad
+  const updatedProperty = await propertyRepository.update(idProperty, data);
+  return updatedProperty;
+};
 
-  return await prisma.propiedad.update({
-    where: { id: parseInt(propertyId) },
-    data: dataFiltrada
-  });
+// Consultar Historial de Precios de una Propiedad
+const getPropertyHistory = async (idProperty) => {
+  return await priceHistoryRepository.findByPropertyId(idProperty);
 };
 
 // 5. Cambiar estado (solo dueño)
@@ -186,20 +151,19 @@ const updatePropertyStatus = async (propertyId, userId, nuevoEstado) => {
   }
 
   const property = await prisma.propiedad.findUnique({
-    where: { id: parseInt(propertyId) }
+    where: { id: parseInt(propertyId, 10) }
   });
   if (!property) throw new Error('Propiedad no encontrada');
   if (property.vendedor_id !== userId) throw new Error('No tienes permisos');
 
   const data = { estado: estadoNormalizado };
 
-  // Si pasa a publicado y no tenía fecha, la asignamos
   if (estadoNormalizado === 'publicado' && !property.fecha_publicacion) {
     data.fecha_publicacion = new Date();
   }
 
   return await prisma.propiedad.update({
-    where: { id: parseInt(propertyId) },
+    where: { id: parseInt(propertyId, 10) },
     data
   });
 };
@@ -207,13 +171,13 @@ const updatePropertyStatus = async (propertyId, userId, nuevoEstado) => {
 // 6. Eliminar (soft delete)
 const deleteProperty = async (propertyId, userId) => {
   const property = await prisma.propiedad.findUnique({
-    where: { id: parseInt(propertyId) }
+    where: { id: parseInt(propertyId, 10) }
   });
   if (!property) throw new Error('Propiedad no encontrada');
   if (property.vendedor_id !== userId) throw new Error('No tienes permisos para eliminar esta propiedad');
 
   return await prisma.propiedad.update({
-    where: { id: parseInt(propertyId) },
+    where: { id: parseInt(propertyId, 10) },
     data: { estado: 'no_disponible' }
   });
 };
@@ -221,8 +185,10 @@ const deleteProperty = async (propertyId, userId) => {
 module.exports = {
   createProperty,
   getAllProperties,
+  getMyProperties,
   getPropertyById,
   updateProperty,
+  getPropertyHistory,
   updatePropertyStatus,
   deleteProperty
 };
