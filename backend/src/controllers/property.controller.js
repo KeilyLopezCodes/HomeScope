@@ -9,8 +9,31 @@ const create = async (req, res) => {
   }
 };
 
+const ORDENES_VALIDOS = ['precio', 'precio_desc', 'fecha', 'fecha_asc', 'indice'];
+const MODALIDADES_VALIDAS = ['VENTA', 'ALQUILER'];
+
 const getAll = async (req, res) => {
   try {
+    const { q, modalidad, tipo_propiedad_id, precio_min, precio_max,
+            habitaciones_min, indice_min, orden, page, limit } = req.query;
+
+    // Validaciones de entrada
+    if (modalidad && !MODALIDADES_VALIDAS.includes(modalidad.toUpperCase())) {
+      return res.status(400).json({ success: false, message: `modalidad debe ser: ${MODALIDADES_VALIDAS.join(', ')}` });
+    }
+    if (orden && !ORDENES_VALIDOS.includes(orden)) {
+      return res.status(400).json({ success: false, message: `orden debe ser: ${ORDENES_VALIDOS.join(', ')}` });
+    }
+    if (precio_min && isNaN(parseFloat(precio_min))) {
+      return res.status(400).json({ success: false, message: 'precio_min debe ser numérico' });
+    }
+    if (precio_max && isNaN(parseFloat(precio_max))) {
+      return res.status(400).json({ success: false, message: 'precio_max debe ser numérico' });
+    }
+    if (precio_min && precio_max && parseFloat(precio_min) > parseFloat(precio_max)) {
+      return res.status(400).json({ success: false, message: 'precio_min no puede ser mayor que precio_max' });
+    }
+
     const result = await propertyService.getAllProperties(req.query);
     res.json({
       success: true,
