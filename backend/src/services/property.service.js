@@ -36,17 +36,119 @@ const createProperty = async (userId, propertyData) => {
   });
 };
 
-const getAllProperties = async (query = {}) => {
-  const page = parseInt(query.page, 10) || 1;
-  const limit = parseInt(query.limit, 10) || 10;
-  const estado = query.estado || 'publicado';
-  const skip = (page - 1) * limit;
 
-  const properties = await propertyRepository.findManyWithPagination({ estado, skip, limit });
-  const totalItems = await propertyRepository.countByEstado(estado);
+// Campos de ordenamiento permitidos (whitelist contra injection)
+const ORDEN_CAMPOS = {
+  precio: { precio: 'asc' },
+  precio_desc: { precio: 'desc' },
+  fecha: { fecha_publicacion: 'desc' },
+  fecha_asc: { fecha_publicacion: 'asc' },
+  indice: { indice_conveniencia: { _count: 'desc' } },
+};
+
+// 2. Buscar y listar propiedades con filtros combinados
+const getAllProperties = async (query = {}) => {
+  const page    = Math.max(parseInt(query.page,  10) || 1, 1);
+  const limit   = Math.min(parseInt(query.limit, 10) || 10, 50);
+  const skip    = (page - 1) * limit;
+
+  // --- Construcción del filtro where (Prisma parametriza automáticamente) ---
+  const where = { estado: 'publicado' };
+
+  // Texto libre: busca en título, descripción, dirección, municipio, departamento
+  if (query.q && query.q.trim()) {
+    const term = query.q.trim();
+    where.OR = [
+      { titulo:      { contains: term, mode: 'insensitive' } },
+      { descripcion: { contains: term, mode: 'insensitive' } },
+      { direccion:   { contains: term, mode: 'insensitive' } },
+      { municipio:   { contains: term, mode: 'insensitive' } },
+      { departamento:{ contains: term, mode: 'insensitive' } },
+    ];
+  }
+
+  // Modalidad: VENTA | ALQUILER
+  if (query.modalidad) {
+    where.modalidad = query.modalidad.toUpperCase();
+  }
+
+  // Tipo de propiedad (ID numérico)
+  if (query.tipo_propiedad_id) {
+    const tid = parseInt(query.tipo_propiedad_id, 10);
+    if (!isNaN(tid)) where.tipo_propiedad_id = tid;
+  }
+
+  // Rango de precio
+  if (query.precio_min || query.precio_max) {
+    where.precio = {};
+    if (query.precio_min) {
+      const min = parseFloat(query.precio_min);
+      if (!isNaN(min)) where.precio.gte = min;
+    }
+    if (query.precio_max) {
+      const max = parseFloat(query.precio_max);
+      if (!isNaN(max)) where.precio.lte = max;
+    }
+  }
+
+  // Habitaciones mínimas
+  if (query.habitaciones_min) {
+    const hab = parseInt(query.habitaciones_min, 10);
+    if (!isNaN(hab)) where.habitaciones = { gte: hab };
+  }
+
+  // Índice de Conveniencia mínimo (filtra por puntaje_total del índice vigente)
+  const indiceMin = query.indice_min ? parseFloat(query.indice_min) : null;
+  if (indiceMin !== null && !isNaN(indiceMin)) {
+    where.indice_conveniencia = {
+      some: { es_vigente: true, puntaje_total: { gte: indiceMin } }
+    };
+  }
+
+  // --- Ordenamiento ---
+  let orderBy = { fecha_publicacion: 'desc' }; // default
+
+  if (query.orden === 'precio')       orderBy = { precio: 'asc' };
+  else if (query.orden === 'precio_desc') orderBy = { precio: 'desc' };
+  else if (query.orden === 'fecha_asc')   orderBy = { fecha_publicacion: 'asc' };
+  else if (query.orden === 'indice') {
+    // Ordenar por puntaje del índice vigente requiere sorteo en memoria
+    // Se resuelve post-query (ver abajo)
+    orderBy = { fecha_publicacion: 'desc' };
+  }
+
+  // --- Ejecución paralela de query + count ---
+  const [properties, totalItems] = await Promise.all([
+    prisma.propiedad.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      include: {
+        usuario:    { select: { id: true, nombre: true, apellido: true, correo: true, telefono: true } },
+        tipo_propiedad: true,
+        foto_propiedad: { where: { es_portada: true }, take: 1 },
+        indice_conveniencia: {
+          where: { es_vigente: true },
+          select: { puntaje_total: true, nivel_semaforo: true },
+          take: 1
+        }
+      }
+    }),
+    prisma.propiedad.count({ where })
+  ]);
+
+  // Ordenamiento por índice de conveniencia (post-query sobre la página)
+  const resultado = query.orden === 'indice'
+    ? properties.sort((a, b) => {
+        const pa = parseFloat(a.indice_conveniencia[0]?.puntaje_total ?? 0);
+        const pb = parseFloat(b.indice_conveniencia[0]?.puntaje_total ?? 0);
+        return pb - pa;
+      })
+    : properties;
 
   return {
-    properties,
+    properties: resultado,
     pagination: {
       totalItems,
       totalPages: Math.ceil(totalItems / limit),
