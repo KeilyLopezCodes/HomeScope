@@ -40,7 +40,7 @@ const registerUser = async (userData) => {
       estado: 'ACTIVO',
     },
   });
-
+  console.log("usuario creado ");
   // 5. Asignar rol si viene especificado
   if (id_rol) {
     await prisma.usuario_rol.create({
@@ -50,6 +50,7 @@ const registerUser = async (userData) => {
       },
     });
   }
+  console.log("rol asignado ");
 
   // 6. Generar token de verificación de correo
   const verificationToken = jwt.sign(
@@ -57,9 +58,10 @@ const registerUser = async (userData) => {
     process.env.JWT_SECRET || 'secret_key_homescope', 
     { expiresIn: '1d' }
   );
-
+  console.log("token generado ");
   // 7. Enviar correo de verificación
   const verifyUrl = `http://localhost:${process.env.PORT || 3000}/api/auth/verify-email?token=${verificationToken}`;
+  console.log(`verifyUrl: ${verifyUrl}`);
   await transporter.sendMail({
     from: '"HomeScope Support" <no-reply@homescope.com>',
     to: email,
