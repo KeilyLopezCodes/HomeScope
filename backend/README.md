@@ -36,11 +36,13 @@ HomeScope/
         ├── config/
         │   └── db.js           # Cliente de conexión a Prisma Client
         ├── controllers/        # Maneja la recepción de solicitudes HTTP (req, res)
+        ├── interfaces/         # Contratos/Interfaces abstractos de los repositorios
         ├── middlewares/        # Funciones intermedias (autenticación JWT, permisos)
         ├── models/             # Definiciones de DTOs y esquemas de validación
+        ├── repositories/       # Implementación concreta del acceso a datos (Prisma ORM)
         ├── routes/
         │   └── health.routes.js # Ruta de prueba de salud de la API y conexión a la BD
-        └── services/           # Lógica de negocio reusable y transacciones con Prisma
+        └── services/           # Lógica de negocio pura (depende de las interfaces de repositorios)
 
 
 ```

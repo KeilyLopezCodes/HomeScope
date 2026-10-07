@@ -33,10 +33,32 @@ const getById = async (req, res) => {
 
 const update = async (req, res) => {
   try {
-    const updated = await propertyService.updateProperty(req.params.id, req.user.id, req.body);
-    res.json({ success: true, message: 'Propiedad actualizada correctamente', data: updated });
+    const { id } = req.params;
+    const userId = req.user ? req.user.id : 1; 
+
+    const updatedProperty = await propertyService.updateProperty(id, req.body, userId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Propiedad actualizada exitosamente',
+      data: updatedProperty
+    });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const getHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const history = await propertyService.getPropertyHistory(id);
+
+    res.status(200).json({
+      success: true,
+      data: history
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -49,4 +71,12 @@ const remove = async (req, res) => {
   }
 };
 
-module.exports = { create, getAll, getById, update, remove };
+// Exportamos TODOS los métodos que se usan en property.routes.js
+module.exports = {
+  create,
+  getAll,
+  getById,
+  update,
+  getHistory,
+  remove
+};
