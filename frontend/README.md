@@ -173,3 +173,114 @@ Para que este frontend funcione, el backend tiene:
 - `GET /auth/verify-email` redirige a `{FRONTEND_URL}/verificado` en lugar de responder JSON.
 - Variable `FRONTEND_URL=http://localhost:5173` en su `.env`.
 
+
+##  Solución de Problemas Frecuentes (Troubleshooting)
+
+Si durante la ejecución local encuentras fallas de inicio en alguno de los dos entornos, verifica las siguientes causas y soluciones:
+
+### 1. Error en el Backend: `[nodemon] app crashed - waiting for file changes before starting...`
+* **Causa:** Ocurre habitualmente cuando Node.js no logra resolver el paquete `cors` dentro del archivo principal del servidor (`app.js` o `server.js`).
+* **Solución:** Abre la terminal en la carpeta del backend e instala la dependencia:
+  ```bash
+  cd backend
+  npm install cors
+  npm run dev
+
+## Error en el frontend: La vista no carga
+* **Ocurre:** cuando Vite no logra resolver las rutas de la aplicación porque la librería de enrutamiento no está presente en el proyecto cliente.
+
+* **Solución:** Corre los siguientes comandos dentro de la carpeta frontend:
+  ```bash
+  cd frontend
+  npm install react-router-dom
+  npm run dev
+
+### Libreria instalada para el formularioPublicacion 
+* **Descripción:** Es la librería principal encargada del manejo, captura y validación eficiente de formularios en React.
+  ```bash
+  cd frontend
+  npm install react-hook-form
+
+## Utilidad en HomeScope
+
+* **Manejo de formularios por pasos:** Preserva el estado de la información ingresada en cada una de las 4 etapas del flujo de publicación de inmuebles.
+* **Validación de campos:** Verifica en tiempo real que los campos obligatorios (como precios, títulos y direcciones) se cumplan antes de permitir avanzar de paso.
+* **Renderizado condicional:** Oculta y muestra campos dinámicamente (por ejemplo, remueve habitaciones, baños y parqueos si el usuario selecciona que la propiedad es un *Terreno / Lote*).
+* **Gestión de borradores:** Extrae mediante `getValues()` la totalidad de los datos para ser guardados como borrador en el almacenamiento local (`localStorage`).
+
+---
+
+## 📁 Arquitectura y Descripción Detallada de Archivos
+
+### 📄 `src/api/propertyApi.js`
+* **Ubicación:** `src/api/propertyApi.js`
+* **¿Qué hace?:** Define los métodos asíncronos que conectan el frontend con la API REST del backend para crear, enviar y gestionar propiedades, adjuntando el token de autenticación del usuario.
+* **¿Por qué está en esta carpeta?:** Sigue el principio de **separación de responsabilidades** (*API Layer*). Aislar las peticiones HTTP en una carpeta dedicada evita mezclar la lógica de red con los componentes visuales en JSX, permitiendo reutilizar las consultas en cualquier pantalla de la aplicación.
+
+---
+
+### 📄 `src/data/guatemalaData.js`
+* **Ubicación:** `src/data/guatemalaData.js`
+* **¿Qué hace?:** Almacena un objeto JavaScript con la estructura geográfica oficial de Guatemala, organizando los 22 departamentos con sus respectivos municipios asignados.
+* **¿Por qué está en esta carpeta?:** Actúa como una fuente de datos estática e inmutable. Mantenerla en la carpeta `data/` desacopla los datos estáticos de la interfaz gráfica, permitiendo alimentar de forma limpia los selectores desplegables en cascada y facilitando su reutilización en futuros componentes de búsqueda y filtrado.
+
+---
+
+### 📄 `src/components/FormularioPublicacion.jsx`
+* **Ubicación:** `src/components/FormularioPublicacion.jsx`
+* **¿Qué hace?:** Es el componente de interfaz que renderiza la vista completa para crear y publicar un inmueble en la plataforma. Guía al usuario a través de 4 pasos interactivos:
+  1. **Paso 1 (Datos Generales):** Captura de título, modalidad de negocio, tipo de inmueble, precio, moneda y características físicas.
+  2. **Paso 2 (Fotografías):** Carga y vista previa de las imágenes de la propiedad.
+  3. **Paso 3 (Ubicación):** Captura de la dirección exacta, zona, y selectores dinámicos de departamento y municipio de Guatemala.
+  4. **Paso 4 (Confirmación):** Resumen previo a la publicación definitiva en el sistema.
+* **¿Por qué está en esta carpeta?:** Corresponde a un componente reutilizable de la interfaz de usuario (*UI Component*) dentro de la estructura modular de la aplicación.
+
+---
+
+## Descripcion de los tipos de Modalidades de Propiedad en HomeScope
+
+El sistema incluye las modalidades clave del mercado de bienes raíces adaptadas a Guatemala:
+
+* **Venta:** Transferencia total del dominio y titularidad del inmueble del propietario al comprador mediante pago único o crédito hipotecario.
+* **Alquiler:** Cesión del uso del inmueble a un inquilino a cambio de un pago periódico mensual.
+* **Alquiler con opción a compra:** Contrato donde el inquilino alquila la propiedad por un periodo pactado con el derecho prioritario de comprarla, abonando en muchos casos parte de las rentas al precio final.
+* **Cesión de derechos:** Transferencia a un tercero de los derechos sobre un contrato de preventa/planos o un terreno en proceso de titulación o loteamiento.
+* **Subarriendo:** Modalidad en la que un arrendatario original alquila parte o la totalidad del inmueble a un tercero, contando con la autorización del propietario.
+
+##  Instrucciones para Ejecutar y Probar la Vista del Formulario
+
+Sigue estos pasos para poner en marcha el proyecto en tu entorno local y probar el flujo completo de publicación:
+
+### 1. Iniciar los Servidores de Desarrollo
+
+Debes abrir **dos terminales independientes** en tu editor de código o consola de comandos:
+
+* **Terminal 1 (Backend):**  
+  Navega hacia el directorio del servidor y ejecuta el script de inicio:
+  ```bash
+  cd backend
+  npm run dev
+
+* **Terminal 2 (Frontend):**  
+  Navega hacia el directorio del cliente y ejecuta la aplicación de React:
+  ```bash
+  cd frontend
+  npm run dev
+### 2. Acceso a la Vista de Publicación
+
+Una vez que ambos servidores estén ejecutándose correctamente:
+
+1. Abre tu navegador web.
+2. Ingresa a la siguiente URL:  
+    `http://localhost:5173/publicar`
+
+---
+
+### 3. Prueba del Formulario de Publicación
+
+Al ingresar a la vista, podrás probar las siguientes funcionalidades e interactuar con el flujo por pasos:
+
+* **Paso 1 (Datos Generales):** Completa el título, selecciona la modalidad del inmueble, el precio y el tipo de propiedad. Si seleccionas **Terreno / Lote**, observa cómo se ocultan automáticamente los campos de habitaciones, baños y parqueos.
+* **Paso 2 (Fotografías):** Adjunta imágenes para visualizar la vista previa interactiva y probar la opción de eliminar archivos.
+* **Paso 3 (Ubicación):** Selecciona cualquier departamento de Guatemala (por ejemplo, *Jalapa*) y verifica cómo el selector de municipios se actualiza en cascada con los municipios correspondientes.
+* **Paso 4 (Confirmación):** Revisa el resumen generado con todos los datos consolidados y procede a la prueba de guardado o envío.

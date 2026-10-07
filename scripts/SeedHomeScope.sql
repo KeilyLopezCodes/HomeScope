@@ -84,3 +84,17 @@ INSERT INTO rol_permiso (rol_id, permiso_id) VALUES
 ON CONFLICT (rol_id, permiso_id) DO NOTHING;
 
 COMMIT;
+--------------
+
+-- 1. Insertar los tipos de propiedad básicos en la tabla tipo_propiedad
+INSERT INTO "tipo_propiedad" ("id", "nombre") 
+VALUES 
+    (1, 'Casa'),
+    (2, 'Apartamento'),
+    (3, 'Terreno'),
+    (4, 'Local Comercial'),
+    (5, 'Oficina')
+ON CONFLICT ("id") DO NOTHING;
+
+-- 2. Sincronizar la secuencia del ID autoincremental (para evitar choques en futuros registros)
+SELECT setval(pg_get_serial_sequence('tipo_propiedad', 'id'), (SELECT MAX(id) FROM "tipo_propiedad"));
