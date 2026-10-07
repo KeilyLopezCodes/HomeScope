@@ -1,9 +1,11 @@
-const prisma = require('../config/db');
+const userRepository = require('../repositories/user.repository');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 
-// Configuración de Nodemailer
+const JWT_SECRET = process.env.JWT_SECRET || 'secret_key_homescope';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -12,138 +14,101 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const registerUser = async (userData) => {
-  const { nombre, email, password, id_rol, apellido } = userData;
+const register = async (userData) => {
+  const { correo, contrasena, nombre, apellido, telefono } = userData;
 
-  // 1. Verificar si el correo ya existe
-  const existingUser = await prisma.usuario.findUnique({ 
-    where: { correo: email } 
-  });
-  if (existingUser) throw new Error('El correo electrónico ya está registrado');
-
-  // 2. Hash de contraseña
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  // 3. Manejar nombre y apellido
-  const partesNombre = nombre ? nombre.trim().split(' ') : ['Usuario'];
-  const nombreFinal = partesNombre[0];
-  const apellidoFinal = apellido || (partesNombre.slice(1).join(' ') || 'Sin Apellido');
-
-  // 4. Crear usuario en PostgreSQL
-  const newUser = await prisma.usuario.create({
-    data: {
-      nombre: nombreFinal,
-      apellido: apellidoFinal,
-      correo: email,
-      password_hash: hashedPassword,
-      correo_verificado: false,
-      estado: 'ACTIVO',
-    },
-  });
-
-  // 5. Asignar rol si viene especificado
-  if (id_rol) {
-    await prisma.usuario_rol.create({
-      data: {
-        usuario_id: newUser.id,
-        rol_id: id_rol,
-      },
-    });
+  if (!correo) {
+    throw new Error('El correo electrónico es requerido');
   }
 
-  // 6. Generar token de verificación de correo
-  const verificationToken = jwt.sign(
-    { id: newUser.id }, 
-    process.env.JWT_SECRET || 'secret_key_homescope', 
-    { expiresIn: '1d' }
-  );
+  const existingUser = await userRepository.findByEmail(correo);
+  if (existingUser) {
+    throw new Error('El correo electrónico ya está registrado');
+  }
 
-  // 7. Enviar correo de verificación
-  const verifyUrl = `http://localhost:${process.env.PORT || 3000}/api/auth/verify-email?token=${verificationToken}`;
-  await transporter.sendMail({
-    from: '"HomeScope Support" <no-reply@homescope.com>',
-    to: email,
-    subject: 'Verifica tu cuenta en HomeScope',
-    html: `<p>Hola ${nombreFinal}, para activar tu cuenta haz clic en el siguiente enlace:</p><a href="${verifyUrl}">${verifyUrl}</a>`,
+  const hashedPassword = await bcrypt.hash(contrasena, 10);
+
+  const newUser = await userRepository.create({
+    correo,
+    password_hash: hashedPassword,
+    nombre: nombre || 'Usuario',
+    apellido: apellido || '',
+    telefono: telefono || null
   });
 
-  return newUser;
+  return {
+    id: newUser.id,
+    correo: newUser.correo,
+    nombre: newUser.nombre
+  };
 };
 
-const loginUser = async (email, password) => {
-  const user = await prisma.usuario.findUnique({ 
-    where: { correo: email } 
-  });
-  if (!user) throw new Error('Credenciales inválidas');
-
-  if (!user.correo_verificado) {
-    throw new Error('Debes verificar tu correo electrónico antes de iniciar sesión');
+const login = async (correo, contrasena) => {
+  if (!correo || !contrasena) {
+    throw new Error('Correo y contraseña son requeridos');
   }
 
-  const validPassword = await bcrypt.compare(password, user.password_hash);
-  if (!validPassword) throw new Error('Credenciales inválidas');
+  const user = await userRepository.findByEmail(correo);
+  if (!user) {
+    throw new Error('Credenciales inválidas');
+  }
 
-  // Firmar token con el id real de la base de datos
+  const isValidPassword = await bcrypt.compare(contrasena, user.password_hash);
+  if (!isValidPassword) {
+    throw new Error('Credenciales inválidas');
+  }
+
   const token = jwt.sign(
-    { id: user.id },
-    process.env.JWT_SECRET || 'secret_key_homescope',
+    { id: user.id, id_rol: user.usuario_rol[0]?.rol_id },
+    JWT_SECRET,
     { expiresIn: '8h' }
   );
 
-  return { 
-    token, 
-    user: { id: user.id, nombre: user.nombre, email: user.correo } 
+  return {
+    token,
+    user: {
+      id: user.id,
+      nombre: user.nombre,
+      correo: user.correo
+    }
   };
 };
 
 const updateUserProfile = async (id_usuario, profileData) => {
   const { nombre, telefono } = profileData;
-  
+
   const partesNombre = nombre ? nombre.trim().split(' ') : [];
   const nombreFinal = partesNombre[0] || undefined;
   const apellidoFinal = partesNombre.slice(1).join(' ') || undefined;
 
-  return await prisma.usuario.update({
-    where: { id: Number(id_usuario) },
-    data: { 
-      ...(nombreFinal && { nombre: nombreFinal }),
-      ...(apellidoFinal && { apellido: apellidoFinal }),
-      ...(telefono && { telefono })
-    },
-    select: { id: true, nombre: true, apellido: true, correo: true, telefono: true },
+  return await userRepository.update(id_usuario, {
+    ...(nombreFinal && { nombre: nombreFinal }),
+    ...(apellidoFinal && { apellido: apellidoFinal }),
+    ...(telefono && { telefono })
   });
 };
 
 const verifyEmail = async (token) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key_homescope');
-    
-    const updatedUser = await prisma.usuario.update({
-      where: { id: decoded.id },
-      data: { correo_verificado: true },
-    });
-
-    return updatedUser;
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return await userRepository.update(decoded.id, { correo_verificado: true });
   } catch (error) {
     throw new Error('Token de verificación inválido o expirado');
   }
 };
 
-module.exports = { registerUser, loginUser, updateUserProfile, verifyEmail };
-
 const forgotPassword = async (email) => {
   if (!email) throw new Error('Escribe tu correo electrónico');
- 
-  const user = await prisma.usuario.findUnique({ where: { correo: email } });
-  // Si no existe NO lanzamos error: así nadie puede averiguar qué correos están registrados.
+
+  const user = await userRepository.findByEmail(email);
   if (!user) return;
- 
-  // El token se firma con JWT_SECRET + el hash actual de la contraseña.
-  // Cuando la contraseña cambia, el hash cambia y el link anterior deja de servir (un solo uso).
-  const token = jwt.sign({ id: user.id, tipo: 'reset' }, JWT_SECRET + user.password_hash, {
-    expiresIn: '15m',
-  });
- 
+
+  const token = jwt.sign(
+    { id: user.id, tipo: 'reset' },
+    JWT_SECRET + user.password_hash,
+    { expiresIn: '15m' }
+  );
+
   const resetUrl = `${FRONTEND_URL}/nueva-password?token=${token}`;
   await transporter.sendMail({
     from: '"HomeScope Support" <no-reply@homescope.com>',
@@ -152,38 +117,34 @@ const forgotPassword = async (email) => {
     html: `<p>Hola ${user.nombre}, haz clic en el link para crear una nueva contraseña. Es válido por 15 minutos:</p><a href="${resetUrl}">${resetUrl}</a><p>Si no lo pediste tú, ignora este correo.</p>`,
   });
 };
- 
+
 const resetPassword = async (token, newPassword) => {
   if (!newPassword || newPassword.length < 8) {
     throw new Error('La contraseña debe tener al menos 8 caracteres');
   }
- 
+
   const invalido = new Error('El link es inválido o ya expiró');
   const decoded = jwt.decode(token);
   if (!decoded || decoded.tipo !== 'reset' || !decoded.id) throw invalido;
- 
-  const user = await prisma.usuario.findUnique({ where: { id: decoded.id } });
+
+  const user = await userRepository.findById(decoded.id);
   if (!user) throw invalido;
- 
+
   try {
     jwt.verify(token, JWT_SECRET + user.password_hash);
   } catch {
     throw invalido;
   }
- 
+
   const hashed = await bcrypt.hash(newPassword, 10);
-  await prisma.usuario.update({
-    where: { id: user.id },
-    data: { password_hash: hashed },
-  });
+  await userRepository.update(user.id, { password_hash: hashed });
 };
- 
+
 module.exports = {
-  registerUser,
-  loginUser,
+  register,
+  login,
   updateUserProfile,
   verifyEmail,
   forgotPassword,
   resetPassword,
 };
- 
