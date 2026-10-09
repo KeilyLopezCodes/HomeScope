@@ -6,6 +6,7 @@ import Registro from '../pages/Registro';
 import Recuperacion from '../pages/Recuperacion';
 import NuevaPassword from '../pages/NuevaPassword';
 import Verificado from '../pages/Verificado';
+import FormularioPublicacion from '../components/FormularioPublicacion';
 
 // Pantalla temporal para probar que el login funciona. Reemplázala por tu home real.
 function Inicio() {
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/recuperar" element={<Recuperacion />} />
           <Route path="/nueva-password" element={<NuevaPassword />} />
           <Route path="/verificado" element={<Verificado />} />
+          <Route path="/publicar" element={<RutaProtegida><FormularioPublicacion /></RutaProtegida>} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
