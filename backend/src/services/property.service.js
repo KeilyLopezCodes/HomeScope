@@ -1,5 +1,6 @@
 const propertyRepository = require('../repositories/property.repository');
 const priceHistoryRepository = require('../repositories/priceHistory.repository');
+const fotoService = require('./foto.service');
 
 const ESTADOS_VALIDOS = ['borrador', 'publicado', 'pausado', 'vendido', 'alquilado', 'no_disponible'];
 
@@ -110,6 +111,8 @@ const deleteProperty = async (propertyId, userId) => {
   const property = await propertyRepository.findById(propertyId);
   if (!property) throw new Error('Propiedad no encontrada');
   if (property.vendedor_id !== userId) throw new Error('No tienes permisos para eliminar esta propiedad');
+
+  await fotoService.eliminarFotosDePropiedad(propertyId);
 
   return await propertyRepository.update(propertyId, { estado: 'no_disponible' });
 };

@@ -29,7 +29,7 @@ class PropertyRepositoryPrisma extends IPropertyRepository {
       where: { vendedor_id: Number(userId) },
       include: {
         tipo_propiedad: true,
-        foto_propiedad: true
+        foto_propiedad: { orderBy: { orden: 'asc'}},
       },
       orderBy: { fecha_creacion: 'desc' }
     });
@@ -41,7 +41,7 @@ class PropertyRepositoryPrisma extends IPropertyRepository {
       include: {
         usuario: { select: { id: true, nombre: true, apellido: true, correo: true, telefono: true } },
         tipo_propiedad: true,
-        foto_propiedad: true,
+        foto_propiedad: { orderBy: { orden: 'asc'}},
         historial_precio: true,
         indice_conveniencia: true
       }
