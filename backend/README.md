@@ -236,3 +236,69 @@ npm install nodemailer
 ```
 
 * **Especificación:** Módulo para Node.js que facilita el envío rápido y seguro de correos electrónicos desde la aplicación (notificaciones, recuperación de contraseñas, etc.).
+
+
+## Carga de imágenes (T25 · Cloudinary)
+
+Los vendedores suben hasta 10 fotos por propiedad. Las imágenes se validan en el backend
+y se guardan en Cloudinary; en la base de datos (`foto_propiedad`) quedan la URL, el orden
+y cuál es la portada.
+
+### Qué necesitas
+1. Las credenciales de Cloudinary.
+2. Agregarlas a `backend/.env`:
+
+```env
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+```
+
+3. Instalar las dependencias nuevas (`cloudinary` y `multer`) después de hacer `git pull`:
+
+```bash
+cd backend
+npm install
+```
+
+En el frontend no hay paquetes nuevos. Si Vite no encuentra `react-hook-form`,
+corre `npm install` dentro de `frontend/`.
+
+> Si cambias el `.env`, reinicia el backend (nodemon no vigila ese archivo): escribe `rs` + Enter.
+
+### Cómo probarlo
+1. Levanta la base de datos, el backend (`npm run dev`) y el frontend (`npm run dev`).
+2. Regístrate e inicia sesión (si te pide verificar el correo, ver "Problemas frecuentes").
+3. Entra a `http://localhost:5173/publicar` y llena los 4 pasos.
+4. En el paso 2: elige varias fotos, cambia la portada, reordénalas (arrastrando o con ◀ ▶) y quita alguna.
+5. En el paso 4 presiona **Publicar Propiedad**: verás la barra de progreso y el mensaje de éxito.
+6. Verifica en la base de datos:
+
+```bash
+docker exec -i postgresDB psql -U admin -d HomeScope -c "SELECT id, propiedad_id, orden, es_portada FROM foto_propiedad ORDER BY orden;"
+```
+
+### Endpoints (requieren `Authorization: Bearer <token>`)
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/api/properties/:id/fotos` | Sube fotos (`form-data`: campo `fotos` repetido, y `portada` con el índice de la portada) |
+| PUT | `/api/properties/:id/fotos/orden` | Cambia el orden y la portada. Body: `{ "ids": [..], "portadaId": X }` |
+| DELETE | `/api/properties/:id/fotos/:fotoId` | Elimina una foto (Cloudinary y base de datos) |
+
+Al eliminar una propiedad también se eliminan sus fotos de Cloudinary.
+
+### Reglas
+- Formatos: jpg, png y webp. Máximo 5 MB por foto y 10 fotos por propiedad.
+- El backend revisa el contenido real del archivo, no solo la extensión.
+- Solo el dueño de la propiedad puede subir, ordenar o borrar sus fotos.
+
+### Problemas frecuentes
+- **"No se pudo conectar con el servidor"**: el backend está apagado o se cayó; revisa su terminal.
+- **`Must supply cloud_name` o `Invalid API key`**: faltan o están mal las claves de Cloudinary en el `.env`.
+- **Miniaturas rotas en el paso 2**: recarga con `Ctrl + Shift + R` y vuelve a elegir las fotos.
+- **No te deja iniciar sesión por correo sin verificar**: verifícalo a mano:
+
+```bash
+docker exec -i postgresDB psql -U admin -d HomeScope -c "UPDATE usuario SET correo_verificado = true WHERE correo = 'tu@correo.com';"
+```
