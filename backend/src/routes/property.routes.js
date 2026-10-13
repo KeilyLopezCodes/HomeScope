@@ -108,8 +108,7 @@ router.get('/', propertyController.getAll);
  */
 router.get('/:id', propertyController.getById);
 
-// T14: Actualización e Historial de precios
-router.put('/:id', authenticateToken, propertyController.update);
+// T14: Historial de precios
 router.get('/:id/history', propertyController.getHistory);
 
 /**

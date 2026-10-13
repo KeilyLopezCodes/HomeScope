@@ -1,11 +1,28 @@
 const propertyService = require('../services/property.service');
 
+// Traduce errores de negocio a códigos HTTP; los errores inesperados (Prisma, etc.) no se exponen
+const ERRORES_NEGOCIO = [
+  { match: 'no encontrada', status: 404 },
+  { match: 'permisos', status: 403 },
+  { match: 'inválido', status: 400 },
+  { match: 'requeridos', status: 400 },
+  { match: 'debe ser', status: 400 },
+  { match: 'campos válidos', status: 400 },
+];
+
+const handleError = (res, error) => {
+  const conocido = ERRORES_NEGOCIO.find((e) => error.message.includes(e.match));
+  if (conocido) return res.status(conocido.status).json({ success: false, message: error.message });
+  console.error(error);
+  res.status(500).json({ success: false, message: 'Error interno del servidor' });
+};
+
 const create = async (req, res) => {
   try {
-    const property = await propertyService.createProperty(req.user.id, req.body);
-    res.status(201).json({ success: true, message: 'Propiedad publicada con éxito', data: property });
+    const property = await propertyService.createProperty(req.user.id, req.body || {});
+    res.status(201).json({ success: true, message: 'Propiedad creada con éxito', data: property });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    handleError(res, error);
   }
 };
 
@@ -41,7 +58,7 @@ const getAll = async (req, res) => {
       pagination: result.pagination
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleError(res, error);
   }
 };
 
@@ -50,16 +67,14 @@ const getById = async (req, res) => {
     const property = await propertyService.getPropertyById(req.params.id);
     res.json({ success: true, data: property });
   } catch (error) {
-    res.status(404).json({ success: false, message: error.message });
+    handleError(res, error);
   }
 };
 
 const update = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user ? req.user.id : 1; 
-
-    const updatedProperty = await propertyService.updateProperty(id, req.body, userId);
+    const updatedProperty = await propertyService.updateProperty(id, req.body || {}, req.user.id);
 
     res.status(200).json({
       success: true,
@@ -67,7 +82,7 @@ const update = async (req, res) => {
       data: updatedProperty
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleError(res, error);
   }
 };
 
@@ -81,7 +96,7 @@ const getHistory = async (req, res) => {
       data: history
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleError(res, error);
   }
 };
 
@@ -90,7 +105,7 @@ const remove = async (req, res) => {
     await propertyService.deleteProperty(req.params.id, req.user.id);
     res.json({ success: true, message: 'Propiedad eliminada correctamente' });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    handleError(res, error);
   }
 };
 
