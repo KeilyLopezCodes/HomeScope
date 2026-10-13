@@ -1,5 +1,18 @@
 const propertyService = require('../services/property.service');
 
+const statusDeError = (error) => {
+  if (error.message.includes('no encontrada')) return 404;
+  if (error.message.includes('permisos')) return 403;
+  if (error.message.includes('inválido') || error.message.includes('debe ser')) return 400;
+  return 500;
+};
+
+const handleError = (res, error) => {
+  const status = statusDeError(error);
+  if (status === 500) console.error(error);
+  res.status(status).json({ success: false, message: status === 500 ? 'Error interno del servidor' : error.message });
+};
+
 const create = async (req, res) => {
   try {
     const property = await propertyService.createProperty(req.user.id, req.body);
@@ -27,16 +40,14 @@ const getById = async (req, res) => {
     const property = await propertyService.getPropertyById(req.params.id);
     res.json({ success: true, data: property });
   } catch (error) {
-    res.status(404).json({ success: false, message: error.message });
+    handleError(res, error);
   }
 };
 
 const update = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user ? req.user.id : 1; 
-
-    const updatedProperty = await propertyService.updateProperty(id, req.body, userId);
+    const updatedProperty = await propertyService.updateProperty(id, req.body || {}, req.user.id);
 
     res.status(200).json({
       success: true,
@@ -44,7 +55,7 @@ const update = async (req, res) => {
       data: updatedProperty
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleError(res, error);
   }
 };
 
@@ -58,7 +69,7 @@ const getHistory = async (req, res) => {
       data: history
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleError(res, error);
   }
 };
 

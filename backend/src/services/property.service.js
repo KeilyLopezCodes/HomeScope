@@ -1,6 +1,7 @@
 const propertyRepository = require('../repositories/property.repository');
 const priceHistoryRepository = require('../repositories/priceHistory.repository');
 const fotoService = require('./foto.service');
+const prisma = require('../config/db');
 
 const ESTADOS_VALIDOS = ['borrador', 'publicado', 'pausado', 'vendido', 'alquilado', 'no_disponible'];
 
@@ -62,31 +63,63 @@ const getMyProperties = async (userId) => {
 };
 
 const getPropertyById = async (id) => {
-  const property = await propertyRepository.findById(id);
+  const property = await propertyRepository.findById(parsePropertyId(id));
   if (!property) throw new Error('Propiedad no encontrada');
   return property;
 };
 
+const parsePropertyId = (id) => {
+  const num = Number(id);
+  if (!Number.isInteger(num) || num <= 0) throw new Error('ID de propiedad inválido');
+  return num;
+};
+
+// precio es NUMERIC(14,2): se compara redondeado para no registrar cambios inexistentes
+const redondearPrecio = (valor) => Math.round(Number(valor) * 100) / 100;
+
 const updateProperty = async (idProperty, data, userId) => {
-  const currentProperty = await propertyRepository.findById(idProperty);
+  const propertyId = parsePropertyId(idProperty);
+  const currentProperty = await propertyRepository.findById(propertyId);
   if (!currentProperty) {
     throw new Error('Propiedad no encontrada');
   }
-
-  if (data.precio && Number(data.precio) !== Number(currentProperty.precio)) {
-    await priceHistoryRepository.createHistoryRecord({
-      propiedadId: idProperty,
-      precioAnterior: currentProperty.precio,
-      precioNuevo: data.precio,
-      cambiadoPor: userId
-    });
+  if (currentProperty.vendedor_id !== userId) {
+    throw new Error('No tienes permisos para editar esta propiedad');
   }
 
-  return await propertyRepository.update(idProperty, data);
+  const updateData = { ...data };
+  let cambioPrecio = false;
+
+  if (data.precio !== undefined) {
+    const precioNuevo = parseFloat(data.precio);
+    if (isNaN(precioNuevo) || precioNuevo < 0) {
+      throw new Error('precio debe ser un número positivo');
+    }
+    updateData.precio = redondearPrecio(precioNuevo);
+    cambioPrecio = updateData.precio !== redondearPrecio(currentProperty.precio);
+  }
+
+  // Update + historial en una transacción: si algo falla no queda un registro
+  // huérfano (y el historial no se puede borrar después)
+  return await prisma.$transaction(async (tx) => {
+    const updated = await propertyRepository.update(propertyId, updateData, tx);
+    if (cambioPrecio) {
+      await priceHistoryRepository.createHistoryRecord({
+        propiedadId: propertyId,
+        precioAnterior: currentProperty.precio,
+        precioNuevo: updateData.precio,
+        cambiadoPor: userId
+      }, tx);
+    }
+    return updated;
+  });
 };
 
 const getPropertyHistory = async (idProperty) => {
-  return await priceHistoryRepository.findByPropertyId(idProperty);
+  const propertyId = parsePropertyId(idProperty);
+  const property = await propertyRepository.findById(propertyId);
+  if (!property) throw new Error('Propiedad no encontrada');
+  return await priceHistoryRepository.findByPropertyId(propertyId);
 };
 
 const updatePropertyStatus = async (propertyId, userId, nuevoEstado) => {
