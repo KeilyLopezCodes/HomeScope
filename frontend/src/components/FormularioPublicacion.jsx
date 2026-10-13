@@ -3,11 +3,16 @@ import { useForm } from 'react-hook-form';
 import { publicarPropiedad } from '../api/propertyApi';
 import { guardarBorradorLocal, obtenerBorradorLocal, limpiarBorradorLocal } from '../utils/draftStorage';
 import { GUATEMALA_UBICACIONES } from '/data/guatemalaData';
+import SubidaFotos from './SubidaFotos';
+import { subirFotos} from '../api/fotoApi';
 
 export default function FormularioPublicacion() {
   const [paso, setPaso] = useState(1);
   const [mensajeExito, setMensajeExito] = useState('');
   const [mensajeError, setMensajeError] = useState('');
+  const [progreso, setProgreso] = useState(null);
+  const [propiedadCreadaId, setPropiedadCreadaId] = useState(null);
+  const [fotos, setFotos] = useState([]);
 
   const {
     register,
@@ -42,7 +47,6 @@ export default function FormularioPublicacion() {
 
   const tipoPropiedad = watch('tipo_propiedad_id');
   const departamentoSeleccionado = watch('departamento');
-  const fotosSeleccionadas = watch('fotos') || [];
 
   // Cuando cambia el departamento, ajusta automáticamente el municipio por defecto
   useEffect(() => {
@@ -70,24 +74,6 @@ export default function FormularioPublicacion() {
     }
   };
 
-  const manejarSeleccionFotos = (e) => {
-    const archivos = Array.from(e.target.files);
-    if (!archivos.length) return;
-
-    const nuevasFotos = archivos.map((archivo) => ({
-      file: archivo,
-      previewUrl: URL.createObjectURL(archivo),
-      nombre: archivo.name
-    }));
-
-    setValue('fotos', [...fotosSeleccionadas, ...nuevasFotos]);
-  };
-
-  const eliminarFoto = (index) => {
-    const filtradas = fotosSeleccionadas.filter((_, i) => i !== index);
-    setValue('fotos', filtradas);
-  };
-
   const avanzarPaso = async (e) => {
     if (e) e.preventDefault();
 
@@ -107,12 +93,15 @@ export default function FormularioPublicacion() {
   };
 
   const onSubmit = async (data) => {
-    if (paso !== 4) return;
+  if (paso !== 4) return;
 
-    setMensajeError('');
-    setMensajeExito('');
+  setMensajeError('');
+  setMensajeExito('');
 
-    try {
+  let id = propiedadCreadaId;
+
+  try {
+    if (!id) {
       const payload = {
         titulo: data.titulo,
         descripcion: data.descripcion,
@@ -132,15 +121,33 @@ export default function FormularioPublicacion() {
         longitud: data.longitud
       };
 
-      await publicarPropiedad(payload);
-      limpiarBorradorLocal();
-      setMensajeExito('¡Propiedad publicada con éxito!');
-      reset();
-      setPaso(1);
-    } catch (error) {
-      setMensajeError(error.message || 'Error al guardar en el servidor.');
+      const creada = await publicarPropiedad(payload);
+      id = creada.data.id;
+      setPropiedadCreadaId(id);
     }
-  };
+
+    if (fotos.length > 0) {
+      setProgreso(0);
+      console.log(fotos.map((f) => f.file instanceof File));
+      await subirFotos(id, fotos, { onProgress: setProgreso });
+    }
+
+    limpiarBorradorLocal();
+    setPropiedadCreadaId(null);
+    setProgreso(null);
+    setMensajeExito('¡Propiedad publicada con éxito!');
+    reset();
+    setPaso(1);
+    setFotos([]);
+  } catch (error) {
+    setProgreso(null);
+    setMensajeError(
+      id
+        ? `La propiedad se guardó, pero las fotos no se subieron: ${error.message}. Presiona "Publicar Propiedad" para reintentar solo las fotos.`
+        : error.message || 'Error al guardar en el servidor.'
+    );
+  }
+};
 
   return (
     <div className="max-w-4xl mx-auto my-8 p-6 md:p-8 bg-white border border-gray-100 rounded-xl shadow-lg">
@@ -291,27 +298,8 @@ export default function FormularioPublicacion() {
         {paso === 2 && (
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-[#222A33]">Galería de Imágenes</h3>
-            <div className="border-2 border-dashed border-gray-300 p-8 text-center rounded-xl bg-gray-50">
-              <p className="text-gray-600 mb-3 font-medium">Selecciona las fotografías de la propiedad</p>
-              <input type="file" multiple accept="image/*" className="hidden" id="foto-input" onChange={manejarSeleccionFotos} />
-              <label htmlFor="foto-input" className="cursor-pointer px-5 py-2.5 bg-[#1E4273] text-white text-sm font-medium rounded-lg hover:bg-[#163156] inline-block transition-colors">
-                Examinar Archivos
-              </label>
+            <SubidaFotos value={fotos} onChange={(setFotos) }/>
             </div>
-
-            {fotosSeleccionadas.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-                {fotosSeleccionadas.map((item, idx) => (
-                  <div key={idx} className="relative border rounded-lg overflow-hidden shadow-sm">
-                    <img src={item.previewUrl} alt="Vista previa" className="w-full h-28 object-cover" />
-                    <button type="button" onClick={() => eliminarFoto(idx)} className="absolute top-1 right-1 bg-rose-600 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shadow">
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         )}
 
         {/* PASO 3: UBICACIÓN DE GUATEMALA */}
@@ -358,6 +346,7 @@ export default function FormularioPublicacion() {
               <p><strong>Título:</strong> {getValues('titulo')}</p>
               <p><strong>Modalidad / Precio:</strong> {getValues('modalidad')} - {getValues('moneda')} {getValues('precio')}</p>
               <p><strong>Ubicación:</strong> {getValues('direccion')}, Zona {getValues('zona')}, {getValues('municipio')}, {getValues('departamento')}</p>
+              <p><strong>Fotografías:</strong> {fotos.length} seleccionadas</p>
               <p>
                 <strong>Detalles:</strong>{' '}
                 {esTerreno ? (
@@ -368,6 +357,17 @@ export default function FormularioPublicacion() {
                   </span>
                 )}
               </p>
+            </div>
+          </div>
+        )}
+
+        {progreso !== null && (
+          <div className="mt-6">
+            <p className="text-sm text-[#222A33] mb-1">
+              {progreso < 100 ? `Subiendo fotografías... ${progreso}%` : 'Procesando imágenes...'}
+            </p>
+            <div className="h-2 w-full rounded-full bg-gray-100" role="progressbar" aria-valuenow={progreso} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-2 rounded-full bg-[#2E9E6B] transition-all" style={{width: `${progreso}%`}} />
             </div>
           </div>
         )}
