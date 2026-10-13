@@ -53,7 +53,8 @@ const getAllProperties = async (query = {}) => {
   const skip    = (page - 1) * limit;
 
   // --- Construcción del filtro where (Prisma parametriza automáticamente) ---
-  const where = { estado: 'publicado' };
+  const where = {};
+  if (!query.incluir_borradores) where.estado = 'publicado';
 
   // Texto libre: busca en título, descripción, dirección, municipio, departamento
   if (query.q && query.q.trim()) {
@@ -116,7 +117,7 @@ const getAllProperties = async (query = {}) => {
     // Se resuelve post-query (ver abajo)
     orderBy = { fecha_publicacion: 'desc' };
   }
-
+  console.log(query);
   // --- Ejecución paralela de query + count ---
   const [properties, totalItems] = await Promise.all([
     prisma.propiedad.findMany({
@@ -137,6 +138,7 @@ const getAllProperties = async (query = {}) => {
     }),
     prisma.propiedad.count({ where })
   ]);
+  console.log('properties', properties);
 
   // Ordenamiento por índice de conveniencia (post-query sobre la página)
   const resultado = query.orden === 'indice'
