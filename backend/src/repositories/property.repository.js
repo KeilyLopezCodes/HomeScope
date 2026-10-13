@@ -42,14 +42,17 @@ class PropertyRepositoryPrisma extends IPropertyRepository {
         usuario: { select: { id: true, nombre: true, apellido: true, correo: true, telefono: true } },
         tipo_propiedad: true,
         foto_propiedad: { orderBy: { orden: 'asc'}},
-        historial_precio: true,
+        historial_precio: {
+          include: { usuario: { select: { id: true, nombre: true } } },
+          orderBy: [{ fecha_cambio: 'asc' }, { id: 'asc' }]
+        },
         indice_conveniencia: true
       }
     });
   }
 
-  async update(id, data) {
-    return await prisma.propiedad.update({
+  async update(id, data, tx = prisma) {
+    return await tx.propiedad.update({
       where: { id: Number(id) },
       data
     });

@@ -190,6 +190,15 @@ const getPropertyById = async (id) => {
   return property;
 };
 
+const parsePropertyId = (id) => {
+  const num = Number(id);
+  if (!Number.isInteger(num) || num <= 0) throw new Error('ID de propiedad inválido');
+  return num;
+};
+
+// precio es NUMERIC(14,2): se compara redondeado para no registrar cambios inexistentes
+const redondearPrecio = (valor) => Math.round(Number(valor) * 100) / 100;
+
 const updateProperty = async (idProperty, data, userId) => {
   const propertyId = parsePropertyId(idProperty);
   const currentProperty = await propertyRepository.findById(propertyId);
