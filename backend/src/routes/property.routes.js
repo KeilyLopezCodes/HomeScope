@@ -5,8 +5,6 @@ const propertyController = require('../controllers/property.controller');
 // Importar el middleware con su nombre real
 const { authenticateToken } = require('../middlewares/auth.middleware');
 
-// Rutas de propiedades
-router.post('/', authenticateToken, propertyController.create);
 /**
  * @swagger
  * tags:
@@ -105,8 +103,7 @@ router.get('/', propertyController.getAll);
  */
 router.get('/:id', propertyController.getById);
 
-// T14: Actualización e Historial de precios
-router.put('/:id', authenticateToken, propertyController.update);
+// T14: Historial de precios
 router.get('/:id/history', propertyController.getHistory);
 
 /**
