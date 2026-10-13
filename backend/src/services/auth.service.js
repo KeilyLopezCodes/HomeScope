@@ -98,6 +98,9 @@ const verifyEmail = async (token) => {
 };
 
 const forgotPassword = async (email) => {
+  const JWT_SECRET = process.env.JWT_SECRET || 'secret_key_homescope';
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
   if (!email) throw new Error('Escribe tu correo electrónico');
 
   const user = await userRepository.findByEmail(email);
