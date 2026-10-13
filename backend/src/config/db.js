@@ -13,5 +13,5 @@ const prisma = new PrismaClient({adapter})
 //prisma.$connect()
   //.then(() => console.log('Conexión exitosa a PostgreSQL mediante Prisma ORM'))
   //.catch((err) => console.error('Error de conexión:', err));
-
+require('./verificarBD')(prisma);
 module.exports = prisma;

@@ -2,6 +2,9 @@ class IUserRepository {
     async findByEmail(correo){
         throw new Error('Metodo findByEmail() debe ser implementado');        
     }
+    async findAuthById(id) {
+    throw new Error('Método findAuthById() debe ser implementado');
+    }
     async findById(id){
         throw new Error('Metodo findById() debe ser implementado');
     }
