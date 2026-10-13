@@ -8,3 +8,4 @@ backend/.devin/
 backend/.cursor/
 backend/.agents/
 .claude
+.vscode

@@ -654,3 +654,27 @@ CREATE UNIQUE INDEX uq_conversacion_propiedad_comprador
 
 CREATE UNIQUE INDEX uq_resena_comprador_propiedad
   ON resena (comprador_id ASC, propiedad_id ASC);
+
+-- Regla de negocio: el historial de precios es inmutable (solo INSERT)
+CREATE OR REPLACE FUNCTION fn_historial_precio_inmutable()
+RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'historial_precio es inmutable: no se permite % sobre registros existentes', TG_OP;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_historial_precio_inmutable ON historial_precio;
+CREATE TRIGGER trg_historial_precio_inmutable
+  BEFORE UPDATE OR DELETE ON historial_precio
+  FOR EACH ROW EXECUTE FUNCTION fn_historial_precio_inmutable();
+
+DROP TRIGGER IF EXISTS trg_historial_precio_no_truncate ON historial_precio;
+CREATE TRIGGER trg_historial_precio_no_truncate
+  BEFORE TRUNCATE ON historial_precio
+  FOR EACH STATEMENT EXECUTE FUNCTION fn_historial_precio_inmutable();
+
+
+-- Regla de negocio: un reporte abierto (pendiente o en revisión) por usuario y publicación
+CREATE UNIQUE INDEX IF NOT EXISTS uq_reporte_abierto_propiedad
+  ON reporte (reportante_id, propiedad_id)
+  WHERE tipo_objetivo = 'propiedad' AND estado IN ('pendiente', 'en_revision');
