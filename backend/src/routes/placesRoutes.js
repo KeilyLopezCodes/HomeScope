@@ -53,6 +53,7 @@ const placesController = require('../controllers/placesController');
  *               properties:
  *                 success: { type: boolean, example: true }
  *                 message: { type: string, example: 'Lugares consultados y puntos de interés persistidos exitosamente.' }
+ *                 total:   { type: integer, example: 1 }
  *                 data:
  *                   type: object
  *                   additionalProperties:

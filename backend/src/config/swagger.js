@@ -1,3 +1,4 @@
+const path = require('path');
 const swaggerJsdoc = require('swagger-jsdoc');
 
 // Prisma serializa los campos DECIMAL como string para no perder precisión
@@ -351,11 +352,25 @@ const options = {
             tiempo_estimado_min: { type: 'integer', example: 10, description: 'Caminando, a 80 m/min' },
             radio_consulta_m:    { type: 'integer', example: 5000 }
           }
+        },
+
+        // ── Reportes ──────────────────────────────────────────
+        Report: {
+          type: 'object',
+          properties: {
+            id:             { type: 'integer', example: 1 },
+            propiedad_id:   { type: 'integer', example: 46 },
+            motivo:         { type: 'string', example: 'fraude' },
+            descripcion:    { type: 'string', nullable: true, example: 'El vendedor pide un depósito antes de mostrar la casa.' },
+            estado:         { type: 'string', enum: ['pendiente', 'en_revision', 'resuelto', 'descartado'], example: 'pendiente' },
+            fecha_creacion: { type: 'string', format: 'date-time' }
+          }
         }
       }
     }
   },
-  apis: ['./src/routes/*.js']
+  // glob con "/" (en Windows path.join usa "\" y el glob no encuentra archivos)
+  apis: [path.join(__dirname, '../routes/*.js').replace(/\\/g, '/')]
 };
 
 module.exports = swaggerJsdoc(options);
