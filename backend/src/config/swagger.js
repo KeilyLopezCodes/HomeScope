@@ -209,6 +209,55 @@ const options = {
             fecha_creacion: { type: 'string', format: 'date-time' }
           }
         },
+        ReportDetail: {
+          type: 'object',
+          properties: {
+            id:             { type: 'integer', example: 1 },
+            motivo:         { type: 'string', example: 'fotos_falsas' },
+            descripcion:    { type: 'string', nullable: true },
+            estado:         { type: 'string', enum: ['pendiente', 'en_revision', 'resuelto', 'descartado'] },
+            fecha_creacion: { type: 'string', format: 'date-time' },
+            propiedad: {
+              type: 'object',
+              properties: {
+                id:          { type: 'integer', example: 3 },
+                titulo:      { type: 'string', example: 'Casa en zona 10' },
+                estado:      { type: 'string', example: 'publicado' },
+                vendedor_id: { type: 'integer', example: 2 }
+              }
+            },
+            reportante: {
+              type: 'object',
+              properties: {
+                id:       { type: 'integer' },
+                nombre:   { type: 'string' },
+                apellido: { type: 'string' }
+              }
+            },
+            acciones_moderacion: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id:               { type: 'integer' },
+                  accion:           { type: 'string', enum: ['aprobar_reporte', 'rechazar_reporte'] },
+                  motivo:           { type: 'string' },
+                  fecha_accion:     { type: 'string', format: 'date-time' },
+                  administrador_id: { type: 'integer' }
+                }
+              }
+            }
+          }
+        },
+        Pagination: {
+          type: 'object',
+          properties: {
+            totalItems:  { type: 'integer', example: 12 },
+            totalPages:  { type: 'integer', example: 1 },
+            currentPage: { type: 'integer', example: 1 },
+            limit:       { type: 'integer', example: 20 }
+          }
+        },
         // ── Responses ─────────────────────────────────────────
         SuccessResponse: {
           type: 'object',

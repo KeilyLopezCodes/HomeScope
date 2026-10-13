@@ -32,7 +32,40 @@ const reportProperty = async (req, res) => {
   }
 };
 
+// Renombra las relaciones generadas por Prisma a nombres legibles para la API
+const formatearReporte = (r) => ({
+  id: r.id,
+  motivo: r.motivo,
+  descripcion: r.descripcion,
+  estado: r.estado,
+  fecha_creacion: r.fecha_creacion,
+  propiedad: r.propiedad,
+  reportante: r.usuario_reporte_reportante_idTousuario,
+  acciones_moderacion: r.accion_moderacion
+});
+
+const listReports = async (req, res) => {
+  try {
+    const { reportes, pagination } = await reportService.listReports(req.query);
+    res.json({ success: true, data: reportes.map(formatearReporte), pagination });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+const resolver = (accion, mensaje) => async (req, res) => {
+  try {
+    const reporte = await reportService[accion](req.params.id, req.user.id, req.body || {});
+    res.json({ success: true, message: mensaje, data: formatearReporte(reporte) });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
 module.exports = {
   getMotivos,
-  reportProperty
+  reportProperty,
+  listReports,
+  approveReport: resolver('approveReport', 'Reporte aprobado. La publicación no se modificó; queda a criterio de moderación.'),
+  rejectReport: resolver('rejectReport', 'Reporte rechazado')
 };

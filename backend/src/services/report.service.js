@@ -1,4 +1,5 @@
 const reportRepository = require('../repositories/report.repository');
+const { ESTADOS_ABIERTOS } = require('../repositories/report.repository');
 const propertyRepository = require('../repositories/property.repository');
 
 const MOTIVOS_REPORTE = {
@@ -72,8 +73,79 @@ const reportProperty = async (idProperty, reportanteId, { motivo, descripcion } 
   }
 };
 
+const ESTADOS_REPORTE = ['pendiente', 'en_revision', 'resuelto', 'descartado'];
+const MAX_MOTIVO_RESOLUCION = 300;
+
+// Aprobar = el reporte es válido (resuelto); rechazar = no procede (descartado).
+// Ninguna de las dos modifica la publicación: pausarla o eliminarla es una acción de
+// moderación aparte (permiso moderacion.publicacion).
+const DECISIONES = {
+  aprobar: { nuevoEstado: 'resuelto', accion: 'aprobar_reporte' },
+  rechazar: { nuevoEstado: 'descartado', accion: 'rechazar_reporte' }
+};
+
+const parseId = (id, nombre) => {
+  const num = Number(id);
+  if (!Number.isInteger(num) || num <= 0) throw errorHttp(`ID de ${nombre} inválido`, 400);
+  return num;
+};
+
+const listReports = async (query = {}) => {
+  const page = Math.max(parseInt(query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(query.limit, 10) || 20, 1), 50);
+  const estado = query.estado || 'pendiente';
+  if (estado !== 'todos' && !ESTADOS_REPORTE.includes(estado)) {
+    throw errorHttp(`estado debe ser uno de: ${[...ESTADOS_REPORTE, 'todos'].join(', ')}`, 400);
+  }
+  const propiedadId = query.propiedad_id ? parseId(query.propiedad_id, 'propiedad') : undefined;
+
+  const { reportes, total } = await reportRepository.findManyWithPagination({
+    estado: estado === 'todos' ? undefined : estado,
+    propiedadId,
+    skip: (page - 1) * limit,
+    limit
+  });
+
+  return {
+    reportes,
+    pagination: { totalItems: total, totalPages: Math.ceil(total / limit), currentPage: page, limit }
+  };
+};
+
+const resolveReport = async (idReport, administradorId, decision, { motivo } = {}) => {
+  const reporteId = parseId(idReport, 'reporte');
+  const config = DECISIONES[decision];
+
+  const texto = typeof motivo === 'string' ? motivo.trim() : '';
+  if (!texto) {
+    throw errorHttp('Indica el motivo de la decisión (queda registrado en la auditoría de moderación)', 400);
+  }
+  if (texto.length > MAX_MOTIVO_RESOLUCION) {
+    throw errorHttp(`motivo no puede superar ${MAX_MOTIVO_RESOLUCION} caracteres`, 400);
+  }
+
+  const reporte = await reportRepository.findById(reporteId);
+  if (!reporte) throw errorHttp('Reporte no encontrado', 404);
+  if (!ESTADOS_ABIERTOS.includes(reporte.estado)) {
+    throw errorHttp(`El reporte ya fue atendido (estado: ${reporte.estado})`, 409);
+  }
+
+  const resuelto = await reportRepository.resolve(reporteId, {
+    nuevoEstado: config.nuevoEstado,
+    administradorId,
+    accion: config.accion,
+    motivo: texto
+  });
+  // Otro moderador lo resolvió entre la lectura y la actualización
+  if (!resuelto) throw errorHttp('El reporte ya fue atendido por otro moderador', 409);
+  return resuelto;
+};
+
 module.exports = {
   MOTIVOS_REPORTE,
   getMotivos,
-  reportProperty
+  reportProperty,
+  listReports,
+  approveReport: (id, adminId, body) => resolveReport(id, adminId, 'aprobar', body),
+  rejectReport: (id, adminId, body) => resolveReport(id, adminId, 'rechazar', body)
 };
