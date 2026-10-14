@@ -1,8 +1,27 @@
 const propertyRepository = require('../repositories/property.repository');
 const priceHistoryRepository = require('../repositories/priceHistory.repository');
 const fotoService = require('./foto.service');
+const prisma = require('../config/db');
 
 const ESTADOS_VALIDOS = ['borrador', 'publicado', 'pausado', 'vendido', 'alquilado', 'no_disponible'];
+
+// Campos que el dueño puede modificar vía PUT (whitelist contra mass assignment)
+const CAMPOS_EDITABLES = {
+  titulo: String, descripcion: String, direccion: String, zona: String,
+  municipio: String, departamento: String, google_place_id: String,
+  moneda: (v) => String(v).toUpperCase(),
+  modalidad: (v) => String(v).toUpperCase(),
+  precio: parseFloat, banos: parseFloat, area_m2: parseFloat,
+  latitud: parseFloat, longitud: parseFloat,
+  habitaciones: (v) => parseInt(v, 10), parqueos: (v) => parseInt(v, 10),
+  tipo_propiedad_id: (v) => parseInt(v, 10),
+};
+
+const parsePropertyId = (id) => {
+  const num = Number(id);
+  if (!Number.isInteger(num) || num <= 0) throw new Error('ID de propiedad inválido');
+  return num;
+};
 
 const createProperty = async (userId, propertyData) => {
   const {
@@ -10,6 +29,16 @@ const createProperty = async (userId, propertyData) => {
     modalidad, habitaciones, banos, estacionamientos, parqueos,
     area_m2, direccion, zona, municipio, departamento, latitud, longitud
   } = propertyData;
+
+  if (!titulo || !descripcion || precio === undefined || precio === null || precio === '') {
+    throw new Error('titulo, descripcion y precio son requeridos');
+  }
+  if (isNaN(parseFloat(precio)) || parseFloat(precio) < 0) {
+    throw new Error('precio debe ser un número positivo');
+  }
+  if (modalidad && !['VENTA', 'ALQUILER'].includes(String(modalidad).toUpperCase())) {
+    throw new Error('modalidad debe ser: VENTA, ALQUILER');
+  }
 
   const numParqueos = parqueos !== undefined 
     ? parseInt(parqueos, 10) 
@@ -20,7 +49,7 @@ const createProperty = async (userId, propertyData) => {
     descripcion,
     precio: parseFloat(precio),
     moneda: moneda || 'USD',
-    modalidad: modalidad || 'VENTA',
+    modalidad: modalidad ? String(modalidad).toUpperCase() : 'VENTA',
     habitaciones: habitaciones ? parseInt(habitaciones, 10) : 0,
     banos: banos ? parseFloat(banos) : 0,
     parqueos: numParqueos,
@@ -37,17 +66,111 @@ const createProperty = async (userId, propertyData) => {
   });
 };
 
-const getAllProperties = async (query = {}) => {
-  const page = parseInt(query.page, 10) || 1;
-  const limit = parseInt(query.limit, 10) || 10;
-  const estado = query.estado || 'publicado';
-  const skip = (page - 1) * limit;
 
-  const properties = await propertyRepository.findManyWithPagination({ estado, skip, limit });
-  const totalItems = await propertyRepository.countByEstado(estado);
+
+// 2. Buscar y listar propiedades con filtros combinados
+const getAllProperties = async (query = {}) => {
+  const page    = Math.max(parseInt(query.page,  10) || 1, 1);
+  const limit   = Math.min(parseInt(query.limit, 10) || 10, 50);
+  const skip    = (page - 1) * limit;
+
+  // --- Construcción del filtro where (Prisma parametriza automáticamente) ---
+  // El listado público solo muestra propiedades publicadas
+  const where = { estado: 'publicado' };
+
+  // Texto libre: busca en título, descripción, dirección, municipio, departamento
+  if (query.q && query.q.trim()) {
+    const term = query.q.trim();
+    where.OR = [
+      { titulo:      { contains: term, mode: 'insensitive' } },
+      { descripcion: { contains: term, mode: 'insensitive' } },
+      { direccion:   { contains: term, mode: 'insensitive' } },
+      { municipio:   { contains: term, mode: 'insensitive' } },
+      { departamento:{ contains: term, mode: 'insensitive' } },
+    ];
+  }
+
+  // Modalidad: VENTA | ALQUILER
+  if (query.modalidad) {
+    where.modalidad = query.modalidad.toUpperCase();
+  }
+
+  // Tipo de propiedad (ID numérico)
+  if (query.tipo_propiedad_id) {
+    const tid = parseInt(query.tipo_propiedad_id, 10);
+    if (!isNaN(tid)) where.tipo_propiedad_id = tid;
+  }
+
+  // Rango de precio
+  if (query.precio_min || query.precio_max) {
+    where.precio = {};
+    if (query.precio_min) {
+      const min = parseFloat(query.precio_min);
+      if (!isNaN(min)) where.precio.gte = min;
+    }
+    if (query.precio_max) {
+      const max = parseFloat(query.precio_max);
+      if (!isNaN(max)) where.precio.lte = max;
+    }
+  }
+
+  // Habitaciones mínimas
+  if (query.habitaciones_min) {
+    const hab = parseInt(query.habitaciones_min, 10);
+    if (!isNaN(hab)) where.habitaciones = { gte: hab };
+  }
+
+  // Índice de Conveniencia mínimo (filtra por puntaje_total del índice vigente)
+  const indiceMin = query.indice_min ? parseFloat(query.indice_min) : null;
+  if (indiceMin !== null && !isNaN(indiceMin)) {
+    where.indice_conveniencia = {
+      some: { es_vigente: true, puntaje_total: { gte: indiceMin } }
+    };
+  }
+
+  // --- Ordenamiento ---
+  let orderBy = { fecha_publicacion: 'desc' }; // default
+
+  if (query.orden === 'precio')       orderBy = { precio: 'asc' };
+  else if (query.orden === 'precio_desc') orderBy = { precio: 'desc' };
+  else if (query.orden === 'fecha_asc')   orderBy = { fecha_publicacion: 'asc' };
+  else if (query.orden === 'indice') {
+    // Ordenar por puntaje del índice vigente requiere sorteo en memoria
+    // Se resuelve post-query (ver abajo)
+    orderBy = { fecha_publicacion: 'desc' };
+  }
+  // --- Ejecución paralela de query + count ---
+  const [properties, totalItems] = await Promise.all([
+    prisma.propiedad.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      include: {
+        usuario:    { select: { id: true, nombre: true, apellido: true, correo: true, telefono: true } },
+        tipo_propiedad: true,
+        foto_propiedad: { where: { es_portada: true }, take: 1 },
+        indice_conveniencia: {
+          where: { es_vigente: true },
+          select: { puntaje_total: true, nivel_semaforo: true },
+          take: 1
+        }
+      }
+    }),
+    prisma.propiedad.count({ where })
+  ]);
+
+  // Ordenamiento por índice de conveniencia (post-query sobre la página)
+  const resultado = query.orden === 'indice'
+    ? properties.sort((a, b) => {
+        const pa = parseFloat(a.indice_conveniencia[0]?.puntaje_total ?? 0);
+        const pb = parseFloat(b.indice_conveniencia[0]?.puntaje_total ?? 0);
+        return pb - pa;
+      })
+    : properties;
 
   return {
-    properties,
+    properties: resultado,
     pagination: {
       totalItems,
       totalPages: Math.ceil(totalItems / limit),
@@ -62,31 +185,52 @@ const getMyProperties = async (userId) => {
 };
 
 const getPropertyById = async (id) => {
-  const property = await propertyRepository.findById(id);
+  const property = await propertyRepository.findById(parsePropertyId(id));
   if (!property) throw new Error('Propiedad no encontrada');
   return property;
 };
 
 const updateProperty = async (idProperty, data, userId) => {
-  const currentProperty = await propertyRepository.findById(idProperty);
-  if (!currentProperty) {
-    throw new Error('Propiedad no encontrada');
-  }
+  const propertyId = parsePropertyId(idProperty);
+  const currentProperty = await propertyRepository.findById(propertyId);
+  if (!currentProperty) throw new Error('Propiedad no encontrada');
+  if (currentProperty.vendedor_id !== userId) throw new Error('No tienes permisos para editar esta propiedad');
 
-  if (data.precio && Number(data.precio) !== Number(currentProperty.precio)) {
-    await priceHistoryRepository.createHistoryRecord({
-      propiedadId: idProperty,
-      precioAnterior: currentProperty.precio,
-      precioNuevo: data.precio,
-      cambiadoPor: userId
-    });
+  const updateData = {};
+  for (const [campo, parse] of Object.entries(CAMPOS_EDITABLES)) {
+    if (data[campo] === undefined) continue;
+    const valor = parse(data[campo]);
+    if (typeof valor === 'number' && isNaN(valor)) throw new Error(`${campo} debe ser numérico`);
+    updateData[campo] = valor;
   }
+  if (Object.keys(updateData).length === 0) throw new Error('No se enviaron campos válidos para actualizar');
+  if (updateData.precio !== undefined && updateData.precio < 0) throw new Error('precio debe ser un número positivo');
+  if (updateData.modalidad && !['VENTA', 'ALQUILER'].includes(updateData.modalidad)) {
+    throw new Error('modalidad debe ser: VENTA, ALQUILER');
+  }
+  updateData.fecha_actualizacion = new Date();
 
-  return await propertyRepository.update(idProperty, data);
+  const cambioPrecio = updateData.precio !== undefined && updateData.precio !== Number(currentProperty.precio);
+
+  // Update + historial en una transacción para no dejar registros huérfanos
+  return await prisma.$transaction(async (tx) => {
+    const updated = await tx.propiedad.update({ where: { id: propertyId }, data: updateData });
+    if (cambioPrecio) {
+      await tx.historial_precio.create({
+        data: {
+          propiedad_id: propertyId,
+          precio_anterior: currentProperty.precio,
+          precio_nuevo: updateData.precio,
+          cambiado_por: userId
+        }
+      });
+    }
+    return updated;
+  });
 };
 
 const getPropertyHistory = async (idProperty) => {
-  return await priceHistoryRepository.findByPropertyId(idProperty);
+  return await priceHistoryRepository.findByPropertyId(parsePropertyId(idProperty));
 };
 
 const updatePropertyStatus = async (propertyId, userId, nuevoEstado) => {
@@ -95,7 +239,7 @@ const updatePropertyStatus = async (propertyId, userId, nuevoEstado) => {
     throw new Error(`Estado inválido. Válidos: ${ESTADOS_VALIDOS.join(', ')}`);
   }
 
-  const property = await propertyRepository.findById(propertyId);
+  const property = await propertyRepository.findById(parsePropertyId(propertyId));
   if (!property) throw new Error('Propiedad no encontrada');
   if (property.vendedor_id !== userId) throw new Error('No tienes permisos');
 
@@ -108,7 +252,7 @@ const updatePropertyStatus = async (propertyId, userId, nuevoEstado) => {
 };
 
 const deleteProperty = async (propertyId, userId) => {
-  const property = await propertyRepository.findById(propertyId);
+  const property = await propertyRepository.findById(parsePropertyId(propertyId));
   if (!property) throw new Error('Propiedad no encontrada');
   if (property.vendedor_id !== userId) throw new Error('No tienes permisos para eliminar esta propiedad');
 
