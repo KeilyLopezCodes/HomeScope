@@ -17,5 +17,6 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/places', placesRoutes);
 app.use('/api/properties', propertyRoutes)
+app.use('/api/v1', require('./routes/geo-indice.routes'))
 
 module.exports = app;
