@@ -90,4 +90,35 @@ async function obtenerLugaresPorCategoria({lat, lng, category, radio=5000, propi
     return resultadoPorCategoria;
 }
 
-module.exports = { obtenerLugaresPorCategoria };
+async function buscarLugaresCercanos({ lat, lng, tipos }) {
+    if (!GOOGLE_MAPS_API_KEY) throw new Error('GOOGLE_MAPS_API_KEY no configurada');
+
+    const consultas = [...new Set(tipos)].map(async (tipo) => {
+        const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&rankby=distance&type=${encodeURIComponent(tipo)}&key=${GOOGLE_MAPS_API_KEY}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+            throw new Error(`Google Places (${tipo}) respondio ${data.status}: ${data.error_message || ''}`);
+        }
+        return data.results || [];
+    });
+
+    const resultados = (await Promise.all(consultas)).flat();
+
+    // un lugar puede salir en varios tipos (ej. school y secondary_school): se une por place_id
+    const vistos = new Set();
+    const lugares = [];
+    for (const p of resultados) {
+        if (!p.place_id || !p.geometry || !p.geometry.location || vistos.has(p.place_id)) continue;
+        vistos.add(p.place_id);
+        lugares.push({
+            googlePlaceId: p.place_id,
+            nombre: p.name,
+            latitud: p.geometry.location.lat,
+            longitud: p.geometry.location.lng
+        });
+    }
+    return lugares;
+}
+
+module.exports = { obtenerLugaresPorCategoria, buscarLugaresCercanos };
