@@ -54,13 +54,3 @@ SELECT id, titulo, estado, latitud, longitud
 FROM propiedad
 WHERE titulo LIKE '[PRUEBA T17]%'
 ORDER BY id;
-
--- ---------------------------------------------------------------------
--- LIMPIEZA (descomenta y ejecuta cuando termines de probar).
--- El orden importa: primero las tablas que dependen de propiedad.
--- ---------------------------------------------------------------------
--- DELETE FROM sub_puntaje_categoria WHERE indice_id IN (
---   SELECT id FROM indice_conveniencia WHERE propiedad_id IN (SELECT id FROM propiedad WHERE titulo LIKE '[PRUEBA T17]%'));
--- DELETE FROM punto_interes WHERE propiedad_id IN (SELECT id FROM propiedad WHERE titulo LIKE '[PRUEBA T17]%');
--- DELETE FROM indice_conveniencia WHERE propiedad_id IN (SELECT id FROM propiedad WHERE titulo LIKE '[PRUEBA T17]%');
--- DELETE FROM propiedad WHERE titulo LIKE '[PRUEBA T17]%';
