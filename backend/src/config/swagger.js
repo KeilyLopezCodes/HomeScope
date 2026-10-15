@@ -1,3 +1,4 @@
+const path = require('path');
 const swaggerJsdoc = require('swagger-jsdoc');
 
 // Prisma serializa los campos DECIMAL como string para no perder precisión
@@ -351,11 +352,109 @@ const options = {
             tiempo_estimado_min: { type: 'integer', example: 10, description: 'Caminando, a 80 m/min' },
             radio_consulta_m:    { type: 'integer', example: 5000 }
           }
+        },
+
+        // ── Reportes ──────────────────────────────────────────
+        Report: {
+          type: 'object',
+          properties: {
+            id:             { type: 'integer', example: 1 },
+            propiedad_id:   { type: 'integer', example: 46 },
+            motivo:         { type: 'string', example: 'fraude' },
+            descripcion:    { type: 'string', nullable: true, example: 'El vendedor pide un depósito antes de mostrar la casa.' },
+            estado:         { type: 'string', enum: ['pendiente', 'en_revision', 'resuelto', 'descartado'], example: 'pendiente' },
+            fecha_creacion: { type: 'string', format: 'date-time' }
+          }
+        },
+        ReportDetail: {
+          type: 'object',
+          properties: {
+            id:             { type: 'integer', example: 1 },
+            motivo:         { type: 'string', example: 'fotos_falsas' },
+            descripcion:    { type: 'string', nullable: true },
+            estado:         { type: 'string', enum: ['pendiente', 'en_revision', 'resuelto', 'descartado'] },
+            fecha_creacion: { type: 'string', format: 'date-time' },
+            propiedad: {
+              type: 'object',
+              properties: {
+                id:          { type: 'integer', example: 3 },
+                titulo:      { type: 'string', example: 'Casa en zona 10' },
+                estado:      { type: 'string', example: 'publicado' },
+                vendedor_id: { type: 'integer', example: 2 }
+              }
+            },
+            reportante: {
+              type: 'object',
+              properties: {
+                id:       { type: 'integer' },
+                nombre:   { type: 'string' },
+                apellido: { type: 'string' }
+              }
+            },
+            acciones_moderacion: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id:               { type: 'integer' },
+                  accion:           { type: 'string', enum: ['aprobar_reporte', 'rechazar_reporte'] },
+                  motivo:           { type: 'string' },
+                  fecha_accion:     { type: 'string', format: 'date-time' },
+                  administrador_id: { type: 'integer' }
+                }
+              }
+            }
+          }
+        },
+        Pagination: {
+          type: 'object',
+          properties: {
+            totalItems:  { type: 'integer', example: 12 },
+            totalPages:  { type: 'integer', example: 1 },
+            currentPage: { type: 'integer', example: 1 },
+            limit:       { type: 'integer', example: 20 }
+          }
+        },
+        // ── Responses ─────────────────────────────────────────
+        SuccessResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            message: { type: 'string', example: 'Operación exitosa' },
+            data:    { type: 'object' }
+          }
+        },
+        ErrorResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: false },
+            message: { type: 'string', example: 'Descripción del error' }
+          }
+        },
+        PaginatedProperties: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            data: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/PropertyDetail' }
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                totalItems:  { type: 'integer', example: 100 },
+                totalPages:  { type: 'integer', example: 10 },
+                currentPage: { type: 'integer', example: 1 },
+                limit:       { type: 'integer', example: 10 }
+              }
+            }
+          }
         }
       }
     }
   },
-  apis: ['./src/routes/*.js']
+  // glob con "/" (en Windows path.join usa "\" y el glob no encuentra archivos)
+  apis: [path.join(__dirname, '../routes/*.js').replace(/\\/g, '/')]
 };
 
 module.exports = swaggerJsdoc(options);

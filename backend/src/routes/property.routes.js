@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const propertyController = require('../controllers/property.controller');
+const reportController = require('../controllers/report.controller');
 
 // Importar el middleware con su nombre real
 const { authenticateToken } = require('../middlewares/auth.middleware');
@@ -308,6 +309,70 @@ router.get('/:id/history', propertyController.getHistory);
  *         $ref: '#/components/responses/InternalError'
  */
 router.patch('/:id/estado', authenticateToken, propertyController.updateStatus);
+
+/**
+ * @swagger
+ * /properties/{id}/reportes:
+ *   post:
+ *     summary: Reportar una publicación sospechosa
+ *     description: |
+ *       Solo publicaciones en estado `publicado`, y no la propia. Un usuario puede tener un solo
+ *       reporte abierto (`pendiente` o `en_revision`) por publicación. Los motivos válidos se
+ *       obtienen en `GET /reportes/motivos`; con motivo `otro` la descripción es obligatoria.
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/PropertyId'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [motivo]
+ *             properties:
+ *               motivo:
+ *                 type: string
+ *                 enum: [fraude, informacion_falsa, precio_enganoso, fotos_falsas, no_disponible, duplicada, contenido_inapropiado, otro]
+ *                 example: fraude
+ *               descripcion:
+ *                 type: string
+ *                 maxLength: 1000
+ *                 example: El vendedor pide un depósito antes de mostrar la casa.
+ *     responses:
+ *       201:
+ *         description: Reporte registrado en estado pendiente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data: { $ref: '#/components/schemas/Report' }
+ *       400:
+ *         $ref: '#/components/responses/BadRequest'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         description: Token inválido o intento de reportar la propia publicación
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
+ *       409:
+ *         description: El usuario ya tiene un reporte abierto sobre esta publicación
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
+ */
+router.post('/:id/reportes', authenticateToken, reportController.reportProperty);
 
 /**
  * @swagger
