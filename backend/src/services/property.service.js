@@ -203,7 +203,6 @@ const getPropertyById = async (id) => {
 };
 
 
-
 // precio es NUMERIC(14,2): se compara redondeado para no registrar cambios inexistentes
 const redondearPrecio = (valor) => Math.round(Number(valor) * 100) / 100;
 
