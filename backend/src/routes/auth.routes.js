@@ -15,6 +15,7 @@ const { authenticateToken } = require('../middlewares/auth.middleware');
  * /auth/register:
  *   post:
  *     summary: Registrar un nuevo usuario
+ *     description: Crea la cuenta con `correo_verificado = false`.
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -24,17 +25,27 @@ const { authenticateToken } = require('../middlewares/auth.middleware');
  *             $ref: '#/components/schemas/AuthRegister'
  *     responses:
  *       201:
- *         description: Usuario registrado. Se envía correo de verificación.
+ *         description: Usuario registrado
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         id:     { type: integer, example: 8 }
+ *                         correo: { type: string, format: email, example: 'juan@example.com' }
+ *                         nombre: { type: string, example: 'Juan' }
  *       400:
  *         description: Datos inválidos o correo ya registrado
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example: { success: false, message: 'El correo electrónico ya está registrado' }
  */
 router.post('/register', authController.register);
 
@@ -43,6 +54,7 @@ router.post('/register', authController.register);
  * /auth/login:
  *   post:
  *     summary: Iniciar sesión
+ *     description: Devuelve un JWT válido por 8 horas que se envía en `Authorization Bearer <token>`.
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -64,13 +76,19 @@ router.post('/register', authController.register);
  *                       type: object
  *                       properties:
  *                         token: { type: string, example: 'eyJhbGci...' }
- *                         usuario: { type: object }
+ *                         user:
+ *                           type: object
+ *                           properties:
+ *                             id:     { type: integer, example: 8 }
+ *                             nombre: { type: string, example: 'Juan' }
+ *                             correo: { type: string, format: email, example: 'juan@example.com' }
  *       401:
- *         description: Credenciales inválidas o cuenta no verificada
+ *         description: Faltan datos o credenciales inválidas
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example: { success: false, message: 'Credenciales inválidas' }
  */
 router.post('/login', authController.login);
 
@@ -79,6 +97,9 @@ router.post('/login', authController.login);
  * /auth/profile:
  *   put:
  *     summary: Actualizar perfil del usuario autenticado
+ *     description: |
+ *       `nombre` recibe el nombre completo: la primera palabra se guarda como nombre y el resto como apellido
+ *       (p. ej. "María José López" → nombre "María", apellido "José López"). Los campos vacíos no se modifican.
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
@@ -89,8 +110,7 @@ router.post('/login', authController.login);
  *           schema:
  *             type: object
  *             properties:
- *               nombre:   { type: string, example: 'Juan' }
- *               apellido: { type: string, example: 'Pérez' }
+ *               nombre:   { type: string, example: 'Juan Pérez', description: 'Nombre completo' }
  *               telefono: { type: string, example: '+502 5555-5555' }
  *     responses:
  *       200:
@@ -98,7 +118,11 @@ router.post('/login', authController.login);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data: { $ref: '#/components/schemas/Usuario' }
  *       400:
  *         description: Error al actualizar
  *         content:
@@ -106,11 +130,9 @@ router.post('/login', authController.login);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
- *         description: Token inválido o ausente
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
  */
 router.put('/profile', authenticateToken, authController.updateProfile);
 
@@ -133,13 +155,15 @@ router.put('/profile', authenticateToken, authController.updateProfile);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
+ *               $ref: '#/components/schemas/MessageResponse'
+ *             example: { success: true, message: 'Cuenta verificada exitosamente.' }
  *       400:
  *         description: Token inválido o expirado
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example: { success: false, message: 'Token de verificación inválido o expirado' }
  */
 router.get('/verify-email', authController.verifyEmail);
 
@@ -148,6 +172,7 @@ router.get('/verify-email', authController.verifyEmail);
  * /auth/forgot-password:
  *   post:
  *     summary: Solicitar recuperación de contraseña
+ *     description: Envía un link (válido 15 minutos) a `{FRONTEND_URL}/nueva-password?token=...`. Si el correo no está registrado responde lo mismo, sin enviar nada.
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -156,15 +181,24 @@ router.get('/verify-email', authController.verifyEmail);
  *           schema:
  *             type: object
  *             required: [email]
+ *             description: Se acepta `email` o `correo`.
  *             properties:
  *               email: { type: string, format: email, example: 'juan@example.com' }
  *     responses:
  *       200:
- *         description: Si el correo existe, se envía el link de recuperación
+ *         description: Solicitud procesada
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
+ *               $ref: '#/components/schemas/MessageResponse'
+ *             example: { success: true, message: 'Si el correo está registrado, te enviamos un link para recuperar tu contraseña.' }
+ *       400:
+ *         description: Correo no enviado en el body, o error al enviar el correo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example: { success: false, message: 'Escribe tu correo electrónico' }
  */
 router.post('/forgot-password', authController.forgotPassword);
 
@@ -173,6 +207,7 @@ router.post('/forgot-password', authController.forgotPassword);
  * /auth/reset-password:
  *   post:
  *     summary: Restablecer contraseña con token
+ *     description: El token es de un solo uso (deja de ser válido al cambiar la contraseña) y expira a los 15 minutos.
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -181,22 +216,25 @@ router.post('/forgot-password', authController.forgotPassword);
  *           schema:
  *             type: object
  *             required: [token, password]
+ *             description: Se acepta `password` o `contrasena`.
  *             properties:
- *               token:    { type: string }
- *               password: { type: string, format: password, example: 'NuevaPassword123' }
+ *               token:    { type: string, description: 'Token recibido en el link de recuperación' }
+ *               password: { type: string, format: password, minLength: 8, example: 'NuevaPassword123' }
  *     responses:
  *       200:
  *         description: Contraseña actualizada correctamente
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
+ *               $ref: '#/components/schemas/MessageResponse'
+ *             example: { success: true, message: 'Contraseña actualizada correctamente.' }
  *       400:
- *         description: Token inválido o expirado
+ *         description: Contraseña de menos de 8 caracteres, o token inválido o expirado
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example: { success: false, message: 'El link es inválido o ya expiró' }
  */
 router.post('/reset-password', authController.resetPassword);
 

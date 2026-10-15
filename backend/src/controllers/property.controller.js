@@ -100,6 +100,24 @@ const getHistory = async (req, res) => {
   }
 };
 
+const getMine = async (req, res) => {
+  try {
+    const properties = await propertyService.getMyProperties(req.user.id);
+    res.json({ success: true, data: properties });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+const updateStatus = async (req, res) => {
+  try {
+    const property = await propertyService.updatePropertyStatus(req.params.id, req.user.id, req.body?.estado);
+    res.json({ success: true, message: 'Estado actualizado', data: property });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
 const remove = async (req, res) => {
   try {
     await propertyService.deleteProperty(req.params.id, req.user.id);
@@ -116,5 +134,7 @@ module.exports = {
   getById,
   update,
   getHistory,
+  getMine,
+  updateStatus,
   remove
 };
