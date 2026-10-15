@@ -3,3 +3,7 @@ dist/
 build/
 .env
 .env.local
+backend/.claude/
+backend/.devin/
+backend/.cursor/
+backend/.agents/

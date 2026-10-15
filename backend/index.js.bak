@@ -1,0 +1,56 @@
+const express = require("express");
+const cors = require("cors");
+require("dotenv").config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+
+app.get("/", (req, res) => {
+  res.json({ message: "Hola Mundo desde HomeScope API" });
+});
+
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "OK",
+    service: "HomeScope Backend API",
+    database: "Modo Simulación / Mock Active",
+    timestamp: new Date()
+  });
+});
+
+app.get("/api/properties", (req, res) => {
+  const mockProperties = [
+    {
+      id: 1,
+      title: "Casa Moderna en Zona 10",
+      price: 250000,
+      property_type: "CASA",
+      address: "Zona 10, Ciudad de Guatemala",
+      latitude: 14.5983,
+      longitude: -90.5067,
+      convenience_index: 88.5
+    },
+    {
+      id: 2,
+      title: "Apartamento amueblado en Carretera a El Salvador",
+      price: 130000,
+      property_type: "APARTAMENTO",
+      address: "Km 14.5 Carretera a El Salvador",
+      latitude: 14.5521,
+      longitude: -90.4612,
+      convenience_index: 74.2
+    }
+  ];
+
+  res.json({
+    success: true,
+    data: mockProperties
+  });
+});
+
+app.listen(PORT, () => {
+  console.log(`HomeScope API (Modo Mock) corriendo en http://localhost:${PORT}`);
+});

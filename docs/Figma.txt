@@ -1,0 +1,28 @@
+Se diseñaron e integraron los wireframes de baja fidelidad y el flujo de navegación interactivo para la aplicación inmobiliaria HomeScope. 
+Este trabajo establece la base y guía visual para el desarrollo del frontend a partir del Sprint 2.
+
+PANTALLAS CLAVE DISEÑADAS CON LA HERRAMIENTA DE FIGMA 
+    Pantalla 1: Login / Registro de Usuarios
+    Estructura básica para autenticación de usuarios con campos de correo, contraseña y enlace de registro.
+
+    Pantalla 2: Home / Inicio
+    Barra de navegación principal, buscador general por zona/dirección y sección de propiedades destacadas.
+
+    Pantalla 3: Catálogo de Propiedades
+    Listado en formato grid con tarjetas de propiedad (imagen, datos del anunciante, características principales y botones de contacto/publicación). 
+    Barra de filtros combinables sobre el listado: Precio, Tipo de Propiedad, Índice de Conveniencia, No. de Habitaciones y Modalidad. 
+    Incluye buscador por ciudad, zona o dirección y paginación al final del listado.
+
+    Pantalla 4: Ficha de Detalle de Propiedad
+    Vista con galería de fotos paginada, nombre y calificación de la propiedad, descripción, precio y botones para contactar al vendedor o solicitar visita. 
+    Incluye mapa de ubicación (Google Maps) y un bloque con el desglose del Índice de Conveniencia (habitaciones, m², seguridad, transporte, comercio) 
+    que responde por qué la propiedad le conviene al usuario. 
+    Enlaza a la pantalla de reseñas mediante el botón "Ver Reseñas".
+
+    Pantalla 5: Formulario de Publicación de Propiedad (Vista Previa)
+    Estructura inicial del formulario dividido en pasos (Stepper) para la posterior creación de anuncios por parte del vendedor.
+
+El flujo permite simular el recorrido del usuario desde el inicio de sesión, la búsqueda en catálogo, la consulta de detalles de una propiedad y la navegación hacia el módulo de publicación.
+
+ENLACE DE ACCESO
+https://www.figma.com/design/GAhJ70qfXu3Y9K10ojpV4a/Wireframes-y-Flujo-de-Navegaci%C3%B3n---App-Inmobiliaria?node-id=1-4706&t=rm811Nxiwj1Z2x6B-1

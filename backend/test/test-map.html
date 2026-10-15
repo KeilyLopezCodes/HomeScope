@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Prueba Maps JavaScript API</title>
+    <style>
+        #map { height: 400px; width: 100%; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2>Prueba de Maps JavaScript API - HomeScope</h2>
+    <div id="map"></div>
+
+    <script>
+        function initMap() {
+            const guatemala = { lat: 14.6349, lng: -90.5069 };
+            const map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 12,
+                center: guatemala,
+            });
+            console.log("Maps JavaScript API cargada y renderizada correctamente.");
+        }
+    </script>
+    <!-- cuando hagas la prueba solo reemplaza YOUR_GOOGLE_MAPS_API_KEY_HERE con tu clave real -->
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY_HERE&callback=initMap"></script>
+</body>
+</html>
