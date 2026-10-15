@@ -11,6 +11,9 @@ class IUserRepository {
     async create(userData){
         throw new Error('Metodo create() debe ser implementado');
     }
+    async hasPermission(id, codigoPermiso){
+        throw new Error('Metodo hasPermission() debe ser implementado');
+    }
     async update(id, data){
         throw new Error('Metodo update() debe ser implementado');
     }

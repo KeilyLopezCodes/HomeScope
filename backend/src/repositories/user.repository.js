@@ -35,6 +35,17 @@ class userRepositoryPrisma extends IUserRepository {
             data: userData
         });
     }
+    // Los roles son acumulativos: basta con que uno de los roles del usuario tenga el permiso
+    async hasPermission(id, codigoPermiso) {
+        const permiso = await prisma.rol_permiso.findFirst({
+            where: {
+                permiso: { codigo: codigoPermiso },
+                rol: { usuario_rol: { some: { usuario_id: Number(id) } } }
+            },
+            select: { permiso_id: true }
+        });
+        return !!permiso;
+    }
     async update(id, data) {
     return await prisma.usuario.update({
       where: { id: Number(id) },
