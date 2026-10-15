@@ -17,10 +17,19 @@ const CAMPOS_EDITABLES = {
   tipo_propiedad_id: (v) => parseInt(v, 10),
 };
 
+const MAX_INT = 2147483647; // límite de la columna INT en PostgreSQL
+
 const parsePropertyId = (id) => {
   const num = Number(id);
-  if (!Number.isInteger(num) || num <= 0) throw new Error('ID de propiedad inválido');
+  if (!Number.isInteger(num) || num <= 0 || num > MAX_INT) throw new Error('ID de propiedad inválido');
   return num;
+};
+
+// tipo_propiedad_id es SMALLINT con FK: se valida antes de llegar a la BD
+const validarTipoPropiedad = async (tipoId) => {
+  if (!Number.isInteger(tipoId) || tipoId <= 0 || tipoId > 32767) throw new Error('tipo_propiedad_id inválido');
+  const tipo = await prisma.tipo_propiedad.findUnique({ where: { id: tipoId } });
+  if (!tipo) throw new Error('tipo_propiedad_id inválido');
 };
 
 const createProperty = async (userId, propertyData) => {
@@ -44,6 +53,9 @@ const createProperty = async (userId, propertyData) => {
     ? parseInt(parqueos, 10) 
     : (estacionamientos ? parseInt(estacionamientos, 10) : 0);
 
+  const tipoId = tipo_propiedad_id ? parseInt(tipo_propiedad_id, 10) : 1;
+  await validarTipoPropiedad(tipoId);
+
   return await propertyRepository.create({
     titulo,
     descripcion,
@@ -62,7 +74,7 @@ const createProperty = async (userId, propertyData) => {
     longitud: longitud ? parseFloat(longitud) : 0,
     estado: 'borrador',
     vendedor_id: userId,
-    tipo_propiedad_id: tipo_propiedad_id ? parseInt(tipo_propiedad_id, 10) : 1
+    tipo_propiedad_id: tipoId
   });
 };
 
@@ -190,6 +202,10 @@ const getPropertyById = async (id) => {
   return property;
 };
 
+
+// precio es NUMERIC(14,2): se compara redondeado para no registrar cambios inexistentes
+const redondearPrecio = (valor) => Math.round(Number(valor) * 100) / 100;
+
 const updateProperty = async (idProperty, data, userId) => {
   const propertyId = parsePropertyId(idProperty);
   const currentProperty = await propertyRepository.findById(propertyId);
@@ -208,9 +224,11 @@ const updateProperty = async (idProperty, data, userId) => {
   if (updateData.modalidad && !['VENTA', 'ALQUILER'].includes(updateData.modalidad)) {
     throw new Error('modalidad debe ser: VENTA, ALQUILER');
   }
+  if (updateData.tipo_propiedad_id !== undefined) await validarTipoPropiedad(updateData.tipo_propiedad_id);
   updateData.fecha_actualizacion = new Date();
 
-  const cambioPrecio = updateData.precio !== undefined && updateData.precio !== Number(currentProperty.precio);
+  const cambioPrecio = updateData.precio !== undefined
+    && redondearPrecio(updateData.precio) !== redondearPrecio(currentProperty.precio);
 
   // Update + historial en una transacción para no dejar registros huérfanos
   return await prisma.$transaction(async (tx) => {
@@ -230,11 +248,14 @@ const updateProperty = async (idProperty, data, userId) => {
 };
 
 const getPropertyHistory = async (idProperty) => {
-  return await priceHistoryRepository.findByPropertyId(parsePropertyId(idProperty));
+  const propertyId = parsePropertyId(idProperty);
+  const property = await propertyRepository.findById(propertyId);
+  if (!property) throw new Error('Propiedad no encontrada');
+  return await priceHistoryRepository.findByPropertyId(propertyId);
 };
 
 const updatePropertyStatus = async (propertyId, userId, nuevoEstado) => {
-  const estadoNormalizado = nuevoEstado.toLowerCase();
+  const estadoNormalizado = String(nuevoEstado ?? '').toLowerCase();
   if (!ESTADOS_VALIDOS.includes(estadoNormalizado)) {
     throw new Error(`Estado inválido. Válidos: ${ESTADOS_VALIDOS.join(', ')}`);
   }
