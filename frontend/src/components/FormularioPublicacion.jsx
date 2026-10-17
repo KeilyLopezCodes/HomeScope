@@ -5,6 +5,7 @@ import { guardarBorradorLocal, obtenerBorradorLocal, limpiarBorradorLocal } from
 import { GUATEMALA_UBICACIONES } from '/data/guatemalaData';
 import SubidaFotos from './SubidaFotos';
 import { subirFotos} from '../api/fotoApi';
+import { Link } from 'react-router-dom';
 import MapaUbicacion from './MapaUbicacion';
 
 export default function FormularioPublicacion() {
@@ -14,6 +15,7 @@ export default function FormularioPublicacion() {
   const [progreso, setProgreso] = useState(null);
   const [propiedadCreadaId, setPropiedadCreadaId] = useState(null);
   const [fotos, setFotos] = useState([]);
+  const [idPublicada, setIdPublicada] = useState(null);
 
   const {
     register,
@@ -98,6 +100,7 @@ export default function FormularioPublicacion() {
 
   setMensajeError('');
   setMensajeExito('');
+  setIdPublicada(null);
 
   let id = propiedadCreadaId;
 
@@ -137,6 +140,7 @@ export default function FormularioPublicacion() {
     setPropiedadCreadaId(null);
     setProgreso(null);
     setMensajeExito('¡Propiedad publicada con éxito!');
+    setIdPublicada(id);
     reset();
     setPaso(1);
     setFotos([]);
@@ -157,6 +161,11 @@ export default function FormularioPublicacion() {
       {mensajeExito && (
         <div className="mb-4 p-3 bg-emerald-50 border border-[#2E9E6B] text-[#2E9E6B] rounded-lg text-sm font-medium">
           {mensajeExito}
+          {idPublicada && (
+            <Link to={`/propiedades/${idPublicada}`} className="ml-2 underline underline-offset-2">
+              Ver ficha
+            </Link>
+          )}
         </div>
       )}
       {mensajeError && (
