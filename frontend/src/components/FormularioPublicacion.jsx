@@ -6,7 +6,6 @@ import { GUATEMALA_UBICACIONES } from '/data/guatemalaData';
 import SubidaFotos from './SubidaFotos';
 import { subirFotos} from '../api/fotoApi';
 import { Link } from 'react-router-dom';
-import MapaUbicacion from './MapaUbicacion';
 
 export default function FormularioPublicacion() {
   const [paso, setPaso] = useState(1);
@@ -345,16 +344,7 @@ export default function FormularioPublicacion() {
                 </select>
               </div>
             </div>
-
-              {/* MAPA INTERACTIVO DE LA TAREA 20 */}
-              <MapaUbicacion
-                onCoordenadasChange={(lat, lng) => {
-                  setValue('latitud', lat);
-                  setValue('longitud', lng);
-                }}
-              />
           </div>
-          
         )}
 
         {/* PASO 4: CONFIRMACIÓN */}
