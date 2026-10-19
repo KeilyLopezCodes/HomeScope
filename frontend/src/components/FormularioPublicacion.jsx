@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { publicarPropiedad } from '../api/propertyApi';
 import { guardarBorradorLocal, obtenerBorradorLocal, limpiarBorradorLocal } from '../utils/draftStorage';
-import { GUATEMALA_UBICACIONES } from '../../data/guatemalaData';
+import { GUATEMALA_UBICACIONES } from '../data/guatemalaData';
 import SubidaFotos from './SubidaFotos';
 import { subirFotos} from '../api/fotoApi';
 import { Link } from 'react-router-dom';
