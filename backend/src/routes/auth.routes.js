@@ -15,7 +15,7 @@ const { authenticateToken } = require('../middlewares/auth.middleware');
  * /auth/register:
  *   post:
  *     summary: Registrar un nuevo usuario
- *     description: Crea la cuenta con `correo_verificado = false`.
+ *     description: Crea la cuenta con rol comprador. En desarrollo puede quedar verificada automáticamente.
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -36,11 +36,19 @@ const { authenticateToken } = require('../middlewares/auth.middleware');
  *                     data:
  *                       type: object
  *                       properties:
- *                         id:     { type: integer, example: 8 }
- *                         correo: { type: string, format: email, example: 'juan@example.com' }
- *                         nombre: { type: string, example: 'Juan' }
+ *                         id:         { type: integer, example: 8 }
+ *                         correo:     { type: string, format: email, example: 'juan@example.com' }
+ *                         nombre:     { type: string, example: 'Juan' }
+ *                         verificado: { type: boolean, example: true }
  *       400:
- *         description: Datos inválidos o correo ya registrado
+ *         description: Datos inválidos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example: { success: false, message: 'La contraseña debe tener al menos 8 caracteres' }
+ *       409:
+ *         description: El correo ya está registrado
  *         content:
  *           application/json:
  *             schema:
@@ -82,13 +90,27 @@ router.post('/register', authController.register);
  *                             id:     { type: integer, example: 8 }
  *                             nombre: { type: string, example: 'Juan' }
  *                             correo: { type: string, format: email, example: 'juan@example.com' }
+ *       400:
+ *         description: Faltan el correo o la contraseña
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example: { success: false, message: 'Correo y contraseña son requeridos' }
  *       401:
- *         description: Faltan datos o credenciales inválidas
+ *         description: Credenciales inválidas
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *             example: { success: false, message: 'Credenciales inválidas' }
+ *       403:
+ *         description: Correo sin verificar o cuenta inactiva
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example: { success: false, message: 'Debes verificar tu correo electrónico antes de iniciar sesión' }
  */
 router.post('/login', authController.login);
 
@@ -98,7 +120,7 @@ router.post('/login', authController.login);
  *   put:
  *     summary: Actualizar perfil del usuario autenticado
  *     description: |
- *       `nombre` recibe el nombre completo: la primera palabra se guarda como nombre y el resto como apellido
+ *       `nombre` recibe el nombre completo: la primera palabra se guarda como nombre y el resto como apellido, la respuesta nunca incluye la contraseña
  *       (p. ej. "María José López" → nombre "María", apellido "José López"). Los campos vacíos no se modifican.
  *     tags: [Auth]
  *     security:
@@ -141,6 +163,7 @@ router.put('/profile', authenticateToken, authController.updateProfile);
  * /auth/verify-email:
  *   get:
  *     summary: Verificar correo electrónico con token
+ *     description: Es el enlace que llega por correo. Verifica la cuenta y redirige al frontend.
  *     tags: [Auth]
  *     parameters:
  *       - in: query
@@ -150,22 +173,45 @@ router.put('/profile', authenticateToken, authController.updateProfile);
  *           type: string
  *         description: Token de verificación recibido por correo
  *     responses:
+ *       302:
+ *         description: Redirige a `{FRONTEND_URL}/verificado?status=ok` si el token es válido, o a `?status=error` si es inválido o ya expiró.
+ */
+router.get('/verify-email', authController.verifyEmail);
+
+/**
+ * @swagger
+ * /auth/resend-verification:
+ *   post:
+ *     summary: Reenviar el link de verificación de correo
+ *     description: Si la cuenta existe y no está verificada, envía un nuevo link. Responde lo mismo exista o no el correo, para no revelar qué correos están registrados.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [correo]
+ *             description: Se acepta `correo` o `email`.
+ *             properties:
+ *               correo: { type: string, format: email, example: 'juan@example.com' }
+ *     responses:
  *       200:
- *         description: Cuenta verificada exitosamente
+ *         description: Solicitud procesada
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/MessageResponse'
- *             example: { success: true, message: 'Cuenta verificada exitosamente.' }
+ *             example: { success: true, message: 'Si la cuenta existe y no está verificada, te enviamos un nuevo link.' }
  *       400:
- *         description: Token inválido o expirado
+ *         description: Falta el correo en el body
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *             example: { success: false, message: 'Token de verificación inválido o expirado' }
+ *             example: { success: false, message: 'Escribe tu correo electrónico' }
  */
-router.get('/verify-email', authController.verifyEmail);
+router.post('/resend-verification', authController.resendVerification);
 
 /**
  * @swagger
@@ -193,7 +239,7 @@ router.get('/verify-email', authController.verifyEmail);
  *               $ref: '#/components/schemas/MessageResponse'
  *             example: { success: true, message: 'Si el correo está registrado, te enviamos un link para recuperar tu contraseña.' }
  *       400:
- *         description: Correo no enviado en el body, o error al enviar el correo
+ *         description: Correo no enviado en el body.
  *         content:
  *           application/json:
  *             schema:

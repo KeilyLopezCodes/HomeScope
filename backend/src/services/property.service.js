@@ -1,6 +1,7 @@
 const propertyRepository = require('../repositories/property.repository');
 const priceHistoryRepository = require('../repositories/priceHistory.repository');
 const fotoService = require('./foto.service');
+const geoIndiceService = require('./geo-indice.service');
 const prisma = require('../config/db');
 
 const ESTADOS_VALIDOS = ['borrador', 'publicado', 'pausado', 'vendido', 'alquilado', 'no_disponible'];
@@ -227,6 +228,19 @@ const updateProperty = async (idProperty, data, userId) => {
   if (updateData.tipo_propiedad_id !== undefined) await validarTipoPropiedad(updateData.tipo_propiedad_id);
   updateData.fecha_actualizacion = new Date();
 
+  const updated = await propertyRepository.update(idProperty, data);
+
+  //recalcular el Índice de Conveniencia si se acaba de publicar o si cambió la ubicación (RF-17)
+  const estaPublicada = String(updated.estado).toLowerCase() === 'publicado';
+  const sePublicoAhora = estaPublicada && String(currentProperty.estado).toLowerCase() !== 'publicado';
+  const cambioUbicacion =
+    (data.latitud !== undefined && Number(data.latitud) !== Number(currentProperty.latitud)) ||
+    (data.longitud !== undefined && Number(data.longitud) !== Number(currentProperty.longitud));
+  if (estaPublicada && (sePublicoAhora || cambioUbicacion)) {
+    geoIndiceService.encolarCalculo(Number(idProperty)); 
+  }
+
+  return updated;
   const cambioPrecio = updateData.precio !== undefined
     && redondearPrecio(updateData.precio) !== redondearPrecio(currentProperty.precio);
 
@@ -269,7 +283,14 @@ const updatePropertyStatus = async (propertyId, userId, nuevoEstado) => {
     data.fecha_publicacion = new Date();
   }
 
-  return await propertyRepository.update(propertyId, data);
+  const updated = await propertyRepository.update(propertyId, data);
+
+  //al publicar se calcula el índice en segundo plano
+  if (estadoNormalizado === 'publicado' && String(property.estado).toLowerCase() !== 'publicado') {
+    geoIndiceService.encolarCalculo(Number(propertyId));
+  }
+
+  return updated;
 };
 
 const deleteProperty = async (propertyId, userId) => {
