@@ -2,10 +2,10 @@
 // de búsqueda (HU-20), esto se reemplaza por la respuesta de la API.
 
 const zonas = [
-  { zona: "Zona 10", municipio: "Guatemala" },
+  { zona: "Zona 10", municipio: "Jalapa" },
   { zona: "Zona 15", municipio: "Guatemala" },
   { zona: "Zona 4", municipio: "Jalapa" },
-  { zona: "Centro", municipio: "Antigua Guatemala" },
+  { zona: "Centro", municipio: "Jalapa" },
   { zona: "Zona 1", municipio: "Jalapa" },
   { zona: "Zona 16", municipio: "Guatemala" },
 ];
@@ -22,6 +22,6 @@ export const mockPropiedades = Array.from({ length: 23 }).map((_, i) => {
     zona: ubicacion.zona,
     municipio: ubicacion.municipio,
     indice: [92, 78, 55, 40, 88, 63][i % 6],
-    foto: `https://picsum.photos/seed/homescope${i + 1}/400/300`,
+    foto: `https://picsum.photos/seed/homescope${i + 1}/400/300`, // URL de imagen de ejemplo, son imagenes de prueba de picsum.photos!! 
   };
 });

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import PropertyCard from "../components/PropertyCard";
 import Pagination from "../components/Pagination";
 import { mockPropiedades } from "../data/mockPropiedades";
+import logo from "../assets/logo.png";
 
 const POR_PAGINA = 9;
 
@@ -70,6 +71,7 @@ export default function Catalogo() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
+            <img src={logo} alt="HomeScope" className="h-8 w-8" />
             <span className="text-lg font-bold text-[#1E4273]">HomeScope</span>
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-[#222A33]">
@@ -77,10 +79,8 @@ export default function Catalogo() {
             <a href="/catalogo" className="text-[#1E4273]">Catálogo</a>
             <a href="/publicar" className="hover:text-[#1E4273]">Publicar</a>
           </nav>
-          <button className="bg-[#2E9E6B] text-white text-sm font-medium px-4 py-2 rounded-lg hover:opacity-90">
-            Publicar propiedad
-          </button>
-        </div>
+          <button className="bg-[#2E9E6B] text-white text-sm font-medium px-4 py-2 rounded-lg hover:opacity-90">Publicar propiedad</button>
+          </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6">
