@@ -284,23 +284,3 @@ Al ingresar a la vista, podrás probar las siguientes funcionalidades e interact
 * **Paso 2 (Fotografías):** Adjunta imágenes para visualizar la vista previa interactiva y probar la opción de eliminar archivos.
 * **Paso 3 (Ubicación):** Selecciona cualquier departamento de Guatemala (por ejemplo, *Jalapa*) y verifica cómo el selector de municipios se actualiza en cascada con los municipios correspondientes.
 * **Paso 4 (Confirmación):** Revisa el resumen generado con todos los datos consolidados y procede a la prueba de guardado o envío.
-
-### 🗺️ Integración del Mapa Interactivo (T20)
-
-Para la implementación del mapa interactivo y la geolocalización de inmuebles en la plataforma, se utilizaron las librerías **Leaflet** y **React-Leaflet** por las siguientes razones clave:
-
-#### 1. `leaflet`
-* **Definición:** Es la librería JavaScript de código abierto estándar de la industria para mapas interactivos livianos y optimizados para dispositivos móviles y web.
-* **Por qué se eligió:**
-  * **Integración con OpenStreetMap:** Permite renderizar mapas cartográficos completos sin costo alguno, evitando la necesidad de claves API de pago ni restricciones de uso comercial (como en Google Maps API).
-  * **Alto rendimiento:** Maneja la renderización de imágenes por mosaicos (*tiles*), capas personalizadas, marcadores y eventos de arrastre con un consumo de memoria mínimo.
-
-#### 2. `react-leaflet`
-* **Definición:** Es un adaptador de componentes nativos de React que envuelve la API imperativa de Leaflet en un modelo declarativo y reactivo.
-* **Por qué se eligió:**
-  * **Componentización limpia:** Permite gestionar el mapa mediante componentes reutilizables como `<MapContainer>`, `<TileLayer>`, `<Marker>` y `<Popup>`, integrándose directamente con el ciclo de vida y estado de React.
-  * **Actualización en tiempo real:** Facilita la reactividad del mapa ante cambios de estado en los filtros (como actualizar los pines de propiedades en pantalla o desplazar la vista al cambiar de zona/municipio).
-
-#### Comando de instalación:
-```bash
-npm install leaflet react-leaflet

@@ -1,9 +1,9 @@
+
 import React, { useState } from 'react';
 import { MapContainer as MapReact, TileLayer as TileReact, Marker as MarkerReact, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Corregir icono por defecto de Leaflet en React
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
@@ -15,15 +15,65 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// Coordenadas centrales por defecto (Guatemala)
 const GUATEMALA_CENTER = [14.634915, -90.506882];
 
-function ManejadorArrastre({ posicion, setPosicion, onCoordenadasChange }) {
+function ManejadorArrastre({ posicion, setPosicion, onCoordenadasChange, onUbicacionDetectada }) {
+  const consultarGeocoding = async (lat, lng) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=es`,
+        { headers: { 'Accept-Language': 'es' } }
+      );
+
+      if (!response.ok) throw new Error('Error en coordenadas');
+
+      const data = await response.json();
+
+      if (data && onUbicacionDetectada) {
+        const address = data.address || {};
+
+        // Extraer departamento eliminando "Departamento de"
+        let deptoRaw = address.state || address.province || address.county || '';
+        deptoRaw = deptoRaw.replace(/departamento de/i, '').trim();
+
+        // Extraer municipio
+        let muniRaw = address.city || address.town || address.municipality || address.village || address.county || '';
+        muniRaw = muniRaw.replace(/municipio de/i, '').trim();
+
+        // Extraer zona/sector
+        let zona = '1';
+        const sectorTexto = address.suburb || address.neighbourhood || address.quarter || '';
+        const matchZona = sectorTexto.match(/\d+/);
+        if (matchZona) {
+          zona = matchZona[0];
+        } else if (sectorTexto) {
+          zona = sectorTexto;
+        }
+
+        // Dirección formateada
+        const direccion = data.display_name || '';
+
+        onUbicacionDetectada({
+          direccion,
+          departamento: deptoRaw,
+          municipio: muniRaw,
+          zona
+        });
+      }
+    } catch (error) {
+      console.error('Error al autocompletar dirección:', error);
+    }
+  };
+
+  const actualizarPosicion = (lat, lng) => {
+    setPosicion([lat, lng]);
+    if (onCoordenadasChange) onCoordenadasChange(lat, lng);
+    consultarGeocoding(lat, lng);
+  };
+
   useMapEvents({
     click(e) {
-      const nuevaPos = [e.latlng.lat, e.latlng.lng];
-      setPosicion(nuevaPos);
-      if (onCoordenadasChange) onCoordenadasChange(e.latlng.lat, e.latlng.lng);
+      actualizarPosicion(e.latlng.lat, e.latlng.lng);
     }
   });
 
@@ -35,15 +85,14 @@ function ManejadorArrastre({ posicion, setPosicion, onCoordenadasChange }) {
         dragend(e) {
           const marker = e.target;
           const pos = marker.getLatLng();
-          setPosicion([pos.lat, pos.lng]);
-          if (onCoordenadasChange) onCoordenadasChange(pos.lat, pos.lng);
+          actualizarPosicion(pos.lat, pos.lng);
         }
       }}
     />
   );
 }
 
-export default function MapaUbicacion({ onCoordenadasChange }) {
+export default function MapaUbicacion({ onCoordenadasChange, onUbicacionDetectada }) {
   const [posicion, setPosicion] = useState(GUATEMALA_CENTER);
   const [capaSatelite, setCapaSatelite] = useState(false);
 
@@ -79,6 +128,7 @@ export default function MapaUbicacion({ onCoordenadasChange }) {
             posicion={posicion}
             setPosicion={setPosicion}
             onCoordenadasChange={onCoordenadasChange}
+            onUbicacionDetectada={onUbicacionDetectada}
           />
         </MapReact>
       </div>
