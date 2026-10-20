@@ -678,3 +678,14 @@ CREATE TRIGGER trg_historial_precio_no_truncate
 CREATE UNIQUE INDEX IF NOT EXISTS uq_reporte_abierto_propiedad
   ON reporte (reportante_id, propiedad_id)
   WHERE tipo_objetivo = 'propiedad' AND estado IN ('pendiente', 'en_revision');
+
+-- Regla de negocio: la calificación de una reseña va de 1 a 5 y nadie puede calificarse a sí mismo
+ALTER TABLE resena
+  ADD CONSTRAINT ck_resena_calificacion CHECK (calificacion BETWEEN 1 AND 5);
+
+ALTER TABLE resena
+  ADD CONSTRAINT ck_resena_no_autoresena CHECK (comprador_id <> vendedor_id);
+
+-- Listado y promedio de reseñas por vendedor
+CREATE INDEX IF NOT EXISTS idx_resena_vendedor
+  ON resena (vendedor_id, fecha_creacion DESC);

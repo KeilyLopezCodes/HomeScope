@@ -7,6 +7,8 @@ const authRoutes = require('./routes/auth.routes');
 const placesRoutes = require('./routes/placesRoutes');
 const propertyRoutes = require('./routes/property.routes');
 const reportRoutes = require('./routes/report.routes');
+const reviewRoutes = require('./routes/review.routes');
+const sellerRoutes = require('./routes/seller.routes');
 
 const app = express();
 
@@ -28,6 +30,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/places', placesRoutes);
 app.use('/api/properties', propertyRoutes)
 app.use('/api/reportes', reportRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/sellers', sellerRoutes);
 app.use('/api/v1', require('./routes/geo-indice.routes'));
 
 module.exports = app;
