@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { publicarPropiedad } from '../api/propertyApi';
 import { guardarBorradorLocal, obtenerBorradorLocal, limpiarBorradorLocal } from '../utils/draftStorage';
-import { GUATEMALA_UBICACIONES } from '/data/guatemalaData';
+import { GUATEMALA_UBICACIONES } from '../data/guatemalaData';
 import SubidaFotos from './SubidaFotos';
-import { subirFotos} from '../api/fotoApi';
+import { subirFotos } from '../api/fotoApi';
 import { Link } from 'react-router-dom';
+import MapaUbicacion from './MapaUbicacion';
 
 export default function FormularioPublicacion() {
   const [paso, setPaso] = useState(1);
@@ -32,7 +33,7 @@ export default function FormularioPublicacion() {
       modalidad: 'VENTA',
       moneda: 'GTQ',
       precio: '',
-      tipo_propiedad_id: '1', // 1: Casa, 2: Apartamento, 3: Terreno
+      tipo_propiedad_id: '1',
       habitaciones: '',
       banos: '',
       parqueos: '',
@@ -41,8 +42,8 @@ export default function FormularioPublicacion() {
       zona: '1',
       departamento: 'Guatemala',
       municipio: 'Ciudad de Guatemala',
-      latitud: 0,
-      longitud: 0,
+      latitud: 14.634915,
+      longitud: -90.506882,
       fotos: []
     }
   });
@@ -50,7 +51,6 @@ export default function FormularioPublicacion() {
   const tipoPropiedad = watch('tipo_propiedad_id');
   const departamentoSeleccionado = watch('departamento');
 
-  // Cuando cambia el departamento, ajusta automáticamente el municipio por defecto
   useEffect(() => {
     if (departamentoSeleccionado && GUATEMALA_UBICACIONES[departamentoSeleccionado]) {
       const municipios = GUATEMALA_UBICACIONES[departamentoSeleccionado];
@@ -95,63 +95,62 @@ export default function FormularioPublicacion() {
   };
 
   const onSubmit = async (data) => {
-  if (paso !== 4) return;
+    if (paso !== 4) return;
 
-  setMensajeError('');
-  setMensajeExito('');
-  setIdPublicada(null);
+    setMensajeError('');
+    setMensajeExito('');
+    setIdPublicada(null);
 
-  let id = propiedadCreadaId;
+    let id = propiedadCreadaId;
 
-  try {
-    if (!id) {
-      const payload = {
-        titulo: data.titulo,
-        descripcion: data.descripcion,
-        precio: Number(data.precio),
-        moneda: data.moneda,
-        modalidad: data.modalidad,
-        tipo_propiedad_id: Number(data.tipo_propiedad_id),
-        habitaciones: esTerreno ? 0 : Number(data.habitaciones || 0),
-        banos: esTerreno ? 0 : Number(data.banos || 0),
-        parqueos: esTerreno ? 0 : Number(data.parqueos || 0),
-        area_m2: Number(data.area_m2 || 0),
-        direccion: data.direccion,
-        zona: data.zona,
-        municipio: data.municipio,
-        departamento: data.departamento,
-        latitud: data.latitud,
-        longitud: data.longitud
-      };
+    try {
+      if (!id) {
+        const payload = {
+          titulo: data.titulo,
+          descripcion: data.descripcion,
+          precio: Number(data.precio),
+          moneda: data.moneda,
+          modalidad: data.modalidad,
+          tipo_propiedad_id: Number(data.tipo_propiedad_id),
+          habitaciones: esTerreno ? 0 : Number(data.habitaciones || 0),
+          banos: esTerreno ? 0 : Number(data.banos || 0),
+          parqueos: esTerreno ? 0 : Number(data.parqueos || 0),
+          area_m2: Number(data.area_m2 || 0),
+          direccion: data.direccion,
+          zona: data.zona,
+          municipio: data.municipio,
+          departamento: data.departamento,
+          latitud: Number(data.latitud || 0),
+          longitud: Number(data.longitud || 0)
+        };
 
-      const creada = await publicarPropiedad(payload);
-      id = creada.data.id;
-      setPropiedadCreadaId(id);
+        const creada = await publicarPropiedad(payload);
+        id = creada.data.id;
+        setPropiedadCreadaId(id);
+      }
+
+      if (fotos.length > 0) {
+        setProgreso(0);
+        await subirFotos(id, fotos, { onProgress: setProgreso });
+      }
+
+      limpiarBorradorLocal();
+      setPropiedadCreadaId(null);
+      setProgreso(null);
+      setMensajeExito('¡Propiedad publicada con éxito!');
+      setIdPublicada(id);
+      reset();
+      setPaso(1);
+      setFotos([]);
+    } catch (error) {
+      setProgreso(null);
+      setMensajeError(
+        id
+          ? `La propiedad se guardó, pero las fotos no se subieron: ${error.message}. Presiona "Publicar Propiedad" para reintentar solo las fotos.`
+          : error.message || 'Error al guardar en el servidor.'
+      );
     }
-
-    if (fotos.length > 0) {
-      setProgreso(0);
-      console.log(fotos.map((f) => f.file instanceof File));
-      await subirFotos(id, fotos, { onProgress: setProgreso });
-    }
-
-    limpiarBorradorLocal();
-    setPropiedadCreadaId(null);
-    setProgreso(null);
-    setMensajeExito('¡Propiedad publicada con éxito!');
-    setIdPublicada(id);
-    reset();
-    setPaso(1);
-    setFotos([]);
-  } catch (error) {
-    setProgreso(null);
-    setMensajeError(
-      id
-        ? `La propiedad se guardó, pero las fotos no se subieron: ${error.message}. Presiona "Publicar Propiedad" para reintentar solo las fotos.`
-        : error.message || 'Error al guardar en el servidor.'
-    );
-  }
-};
+  };
 
   return (
     <div className="max-w-4xl mx-auto my-8 p-6 md:p-8 bg-white border border-gray-100 rounded-xl shadow-lg">
@@ -270,7 +269,6 @@ export default function FormularioPublicacion() {
               </div>
             </div>
 
-            {/* SI ES TERRENO, NO MUESTRA ESTOS CAMPOS */}
             {!esTerreno && (
               <div className="grid grid-cols-3 gap-4 border-t pt-3 mt-2">
                 <div>
@@ -307,54 +305,116 @@ export default function FormularioPublicacion() {
         {paso === 2 && (
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-[#222A33]">Galería de Imágenes</h3>
-            <SubidaFotos value={fotos} onChange={(setFotos) }/>
-            </div>
+            <SubidaFotos value={fotos} onChange={setFotos} />
+          </div>
         )}
 
         {/* PASO 3: UBICACIÓN DE GUATEMALA */}
         {paso === 3 && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#222A33]">Dirección completa </label>
-              <input {...register('direccion', { required: 'La dirección es obligatoria' })} className="mt-1 w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[#1E4273] focus:outline-none" placeholder="Ej. 12 Calle avenida 23" />
+              <label className="block text-sm font-medium text-[#222A33]">Dirección completa</label>
+              <input
+                {...register('direccion', { required: 'La dirección es obligatoria' })}
+                className="mt-1 w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[#1E4273] focus:outline-none"
+                placeholder="Ej. 12 Calle avenida 23"
+              />
               {errors.direccion && <p className="text-rose-600 text-xs mt-1">{errors.direccion.message}</p>}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[#222A33]">Zona / Sector </label>
-                <input {...register('zona', { required: 'Obligatorio' })} className="mt-1 w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[#1E4273] focus:outline-none" placeholder="Ej. 5" />
+                <label className="block text-sm font-medium text-[#222A33]">Zona / Sector</label>
+                <input
+                  {...register('zona', { required: 'Obligatorio' })}
+                  className="mt-1 w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[#1E4273] focus:outline-none"
+                  placeholder="Ej. 5"
+                />
+              </div>
+
+               <div>
+                <label className="block text-sm font-medium text-[#222A33]">Municipio</label>
+                <select
+                  {...register('municipio')}
+                  className="mt-1 w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[#1E4273] focus:outline-none bg-white"
+                >
+                  {(GUATEMALA_UBICACIONES[departamentoSeleccionado] || []).map((muni) => (
+                    <option key={muni} value={muni}>{muni}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[#222A33]">Departamento </label>
-                <select {...register('departamento')} className="mt-1 w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[#1E4273] focus:outline-none bg-white">
+                <label className="block text-sm font-medium text-[#222A33]">Departamento</label>
+                <select
+                  {...register('departamento')}
+                  className="mt-1 w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[#1E4273] focus:outline-none bg-white"
+                >
                   {Object.keys(GUATEMALA_UBICACIONES).map((depto) => (
                     <option key={depto} value={depto}>{depto}</option>
                   ))}
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[#222A33]">Municipio </label>
-                <select {...register('municipio')} className="mt-1 w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[#1E4273] focus:outline-none bg-white">
-                  {(GUATEMALA_UBICACIONES[departamentoSeleccionado] || []).map((muni) => (
-                    <option key={muni} value={muni}>{muni}</option>
-                  ))}
-                </select>
-              </div>
             </div>
-          </div>
-        )}
 
+           {/* MAPA INTERACTIVO  */}
+          <div className="mt-6 border-t pt-4">
+            <MapaUbicacion
+              onCoordenadasChange={(lat, lng) => {
+                setValue('latitud', lat);
+                setValue('longitud', lng);
+              }}
+              onUbicacionDetectada={({ direccion, departamento, municipio, zona }) => 
+                {
+                  // 1. Actualizar Dirección y Zona
+                  if (direccion) setValue('direccion', direccion, { shouldValidate: true });
+                  if (zona) setValue('zona', zona, { shouldValidate: true });
+
+                  // Función auxiliar para normalizar cadenas (quitar tildes y mayúsculas)
+                  const normalizar = (texto) =>
+                    texto ? texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() : '';
+
+                  const deptoBuscado = normalizar(departamento);
+                  const muniBuscado = normalizar(municipio);
+
+                  // 2. Buscar coincidencia de Departamento
+                  const deptosDisponibles = Object.keys(GUATEMALA_UBICACIONES);
+                  const deptoEncontrado = deptosDisponibles.find(
+                    (d) => normalizar(d) === deptoBuscado || deptoBuscado.includes(normalizar(d)) || normalizar(d).includes(deptoBuscado)
+                  );
+
+                  if (deptoEncontrado) {
+                    setValue('departamento', deptoEncontrado, { shouldValidate: true });
+
+                    // 3. Buscar coincidencia de Municipio dentro del departamento
+                    const munisDisponibles = GUATEMALA_UBICACIONES[deptoEncontrado] || [];
+                    const muniEncontrado = munisDisponibles.find(
+                      (m) => normalizar(m) === muniBuscado || muniBuscado.includes(normalizar(m)) || normalizar(m).includes(muniBuscado)
+                    );
+
+                    if (muniEncontrado) {
+                      setValue('municipio', muniEncontrado, { shouldValidate: true });
+                    } else if (munisDisponibles.length > 0) {
+                      setValue('municipio', munisDisponibles[0]);
+                    }
+                  }
+                }
+              }
+            />
+          </div>
+        </div>
+      )}
+      
         {/* PASO 4: CONFIRMACIÓN */}
         {paso === 4 && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-[#222A33]">Confirmar datos de la propiedad</h3>
             <div className="bg-gray-50 p-5 rounded-xl space-y-2.5 text-sm text-[#222A33] border border-gray-200">
               <p><strong>Título:</strong> {getValues('titulo')}</p>
-              <p><strong>Modalidad / Precio:</strong> {getValues('modalidad')} - {getValues('moneda')} {getValues('precio')}</p>
-              <p><strong>Ubicación:</strong> {getValues('direccion')}, Zona {getValues('zona')}, {getValues('municipio')}, {getValues('departamento')}</p>
+              <p><strong>Modalidad:</strong> {getValues('modalidad')} </p>
+              <p><strong>Precio:</strong> {getValues('moneda')} {getValues('precio')}</p>
+              <p><strong>Ubicación:</strong> {getValues('direccion')}, Zona {getValues('zona')}</p>
               <p><strong>Fotografías:</strong> {fotos.length} seleccionadas</p>
               <p>
                 <strong>Detalles:</strong>{' '}
@@ -376,7 +436,7 @@ export default function FormularioPublicacion() {
               {progreso < 100 ? `Subiendo fotografías... ${progreso}%` : 'Procesando imágenes...'}
             </p>
             <div className="h-2 w-full rounded-full bg-gray-100" role="progressbar" aria-valuenow={progreso} aria-valuemin={0} aria-valuemax={100}>
-              <div className="h-2 rounded-full bg-[#2E9E6B] transition-all" style={{width: `${progreso}%`}} />
+              <div className="h-2 rounded-full bg-[#2E9E6B] transition-all" style={{ width: `${progreso}%` }} />
             </div>
           </div>
         )}
