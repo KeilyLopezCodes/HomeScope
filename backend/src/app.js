@@ -33,5 +33,6 @@ app.use('/api/reportes', reportRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/sellers', sellerRoutes);
 app.use('/api/v1', require('./routes/geo-indice.routes'));
+app.use('/api/admin', require('./routes/admin.routes'));
 
 module.exports = app;
