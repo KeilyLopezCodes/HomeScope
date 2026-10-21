@@ -302,3 +302,47 @@ Al eliminar una propiedad también se eliminan sus fotos de Cloudinary.
 ```bash
 docker exec -i postgresDB psql -U admin -d HomeScope -c "UPDATE usuario SET correo_verificado = true WHERE correo = 'tu@correo.com';"
 ```
+## Mensajería interna (T30 / T41)
+
+Chat entre comprador y vendedor, siempre ligado a una propiedad. Los mensajes se guardan en PostgreSQL y se entregan en tiempo real con WebSockets (socket.io).
+
+### Dependencias nuevas
+```bash
+cd backend && npm install     # socket.io
+cd frontend && npm install    # socket.io-client
+```
+No hay cambios en la base de datos: usa las tablas `conversacion`, `mensaje` y `notificacion` que ya existen.
+
+### Endpoints (todos requieren `Authorization: Bearer <token>`)
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/api/conversaciones` | Abre o reutiliza la conversación de una propiedad (`propiedad_id`, `contenido` opcional) |
+| GET | `/api/conversaciones` | Lista mis conversaciones con mensajes sin leer |
+| GET | `/api/conversaciones/:id` | Detalle (solo participantes) |
+| GET | `/api/conversaciones/:id/mensajes` | Mensajes en orden cronológico; marca como leídos los del otro |
+| POST | `/api/conversaciones/:id/mensajes` | Envía un mensaje (máx. 2000 caracteres) |
+
+Documentados en Swagger: `http://localhost:3000/api/docs` → sección **Mensajería**.
+
+### Eventos WebSocket
+El cliente se conecta a `http://localhost:3000` con `auth: { token }`. Eventos que recibe: `mensaje:nuevo`, `notificacion:nueva`, `mensaje:enviado`, `mensajes:leidos`.
+
+### Reglas
+- Una conversación por propiedad y comprador.
+- Solo participan el comprador y el dueño de la propiedad (otros reciben 403).
+- Solo se puede escribir sobre propiedades en estado `publicado`.
+- No se permiten correos ni teléfonos dentro del chat (se rechaza el mensaje).
+- Si se cae la conexión, el cliente reconecta solo y muestra un aviso.
+
+### Cómo probarlo
+1. Levantar base de datos, backend (`npm run dev`) y frontend (`npm run dev`).
+2. Tener dos usuarios y una propiedad `publicado` cuyo dueño sea uno de ellos.
+3. Abrir **dos navegadores distintos** (o uno normal y uno en incógnito): vendedor y comprador. El mismo navegador comparte la sesión.
+4. Comprador: abrir `http://localhost:5173/propiedades/<id>` → **Enviar mensaje al vendedor** → escribir un mensaje.
+5. Vendedor (fuera de `/mensajes`): debe aparecer el aviso "Nuevo mensaje de…" abajo a la derecha, sin recargar.
+6. Responder y comprobar que el comprador lo ve en vivo.
+7. Probar la reconexión: detener el backend y volver a levantarlo; debe aparecer y desaparecer el banner "Reconectando el chat…".
+8. Verificar en BD:
+```bash
+docker exec postgresDB psql -U <DB_USER> -d <DB_NAME> -c "SELECT id,conversacion_id,remitente_id,contenido FROM mensaje ORDER BY id DESC LIMIT 5;"
+```

@@ -5,6 +5,7 @@ import { obtenerHistorialPrecio, obtenerPropiedad } from '../api/propertyApi';
 import { formatearPrecio } from '../utils/formatoPrecio';
 import EditarPrecio from '../components/EditarPrecio';
 import { Alerta, enlace } from '../components/AuthUI';
+import BotonContactar from '../components/BotonContactar';
 
 const formatearFecha = (fecha) =>
   new Date(fecha).toLocaleString('es-GT', { dateStyle: 'medium', timeStyle: 'short' });
@@ -94,6 +95,7 @@ function Ficha({ id }) {
               onGuardado={alGuardarPrecio}
             />
           )}
+          {!esDueno && <BotonContactar propiedadId={propiedad.id} />}
         </div>
         <Alerta tipo="ok">{mensajeExito}</Alerta>
       </section>
