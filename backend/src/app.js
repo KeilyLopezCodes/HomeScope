@@ -29,5 +29,6 @@ app.use('/api/places', placesRoutes);
 app.use('/api/properties', propertyRoutes)
 app.use('/api/reportes', reportRoutes);
 app.use('/api/v1', require('./routes/geo-indice.routes'));
+app.use('/api/admin', require('./routes/admin.routes'));
 
 module.exports = app;
