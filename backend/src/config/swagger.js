@@ -406,6 +406,82 @@ const options = {
             }
           }
         },
+
+        // ── Reseñas ───────────────────────────────────────────
+        ReviewInput: {
+          type: 'object',
+          required: ['propiedad_id', 'calificacion'],
+          properties: {
+            propiedad_id: { type: 'integer', example: 3, description: 'Propiedad por la que se tuvo contacto; el vendedor calificado es su dueño' },
+            calificacion: { type: 'integer', minimum: 1, maximum: 5, example: 5 },
+            comentario:   { type: 'string', maxLength: 1000, nullable: true, example: 'Muy puntual y respondió todas mis dudas sobre la casa.' }
+          }
+        },
+        Review: {
+          type: 'object',
+          properties: {
+            id:             { type: 'integer', example: 7 },
+            vendedor_id:    { type: 'integer', example: 2 },
+            calificacion:   { type: 'integer', minimum: 1, maximum: 5, example: 5 },
+            comentario:     { type: 'string', nullable: true, example: 'Muy puntual y respondió todas mis dudas sobre la casa.' },
+            fecha_creacion: { type: 'string', format: 'date-time' },
+            propiedad: {
+              type: 'object',
+              properties: {
+                id:     { type: 'integer', example: 3 },
+                titulo: { type: 'string', example: 'Casa en zona 10' }
+              }
+            },
+            comprador: {
+              type: 'object',
+              description: 'Solo se expone el nombre y la inicial del apellido',
+              properties: {
+                id:       { type: 'integer', example: 5 },
+                nombre:   { type: 'string', example: 'Ana L.' },
+                foto_url: { type: 'string', nullable: true, example: null }
+              }
+            }
+          }
+        },
+        RatingSummary: {
+          type: 'object',
+          properties: {
+            promedio: { type: 'number', nullable: true, example: 4.3, description: 'Promedio con un decimal; null si no tiene reseñas' },
+            total:    { type: 'integer', example: 12 },
+            distribucion: {
+              type: 'object',
+              description: 'Cantidad de reseñas por número de estrellas',
+              properties: {
+                5: { type: 'integer', example: 7 },
+                4: { type: 'integer', example: 3 },
+                3: { type: 'integer', example: 1 },
+                2: { type: 'integer', example: 0 },
+                1: { type: 'integer', example: 1 }
+              }
+            }
+          }
+        },
+        SellerPublic: {
+          type: 'object',
+          properties: {
+            id:             { type: 'integer', example: 2 },
+            nombre:         { type: 'string', example: 'Carlos' },
+            apellido:       { type: 'string', example: 'Mendoza' },
+            foto_url:       { type: 'string', nullable: true, example: null },
+            fecha_registro: { type: 'string', format: 'date-time' }
+          }
+        },
+        SellerProfile: {
+          allOf: [
+            { $ref: '#/components/schemas/SellerPublic' },
+            {
+              type: 'object',
+              properties: {
+                calificacion: { $ref: '#/components/schemas/RatingSummary' }
+              }
+            }
+          ]
+        },
         Pagination: {
           type: 'object',
           properties: {

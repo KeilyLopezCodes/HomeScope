@@ -269,6 +269,7 @@ model resena {
   usuario_resena_comprador_idTousuario usuario   @relation("resena_comprador_idTousuario", fields: [comprador_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_to_resena1")
 
   @@unique([comprador_id, propiedad_id], map: "uq_resena_comprador_propiedad")
+  @@index([vendedor_id, fecha_creacion(sort: Desc)], map: "idx_resena_vendedor")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
