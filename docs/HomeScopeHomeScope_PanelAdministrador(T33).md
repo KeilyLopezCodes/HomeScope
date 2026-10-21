@@ -19,6 +19,45 @@ Como administrador de la plataforma, el panel backend permite:
 - **Suspender o reactivar usuarios**.
 - Consultar la **auditoría**: quién hizo cada acción, cuándo y por qué.
 
+## Guía de Pruebas: Módulo de Reportes y Administración
+
+Para probar correctamente el flujo completo del sistema de reportes en **HomeScope**, es necesario utilizar **dos cuentas con roles diferentes**. Esto te permitirá verificar tanto el envío de reportes desde la perspectiva de un usuario común como la gestión y visualización desde el panel de administración.
+
+### Requisitos previos
+
+* Tener la base de datos levantada y los contenedores de Docker activos.
+* Tener registradas al menos dos cuentas de usuario en el sistema:
+1. **Usuario normal** (ej. comprador o vendedor).
+2. **Usuario administrador** (con el rol `administrador` asignado en la base de datos).
+
+
+
+---
+
+### Pasos para realizar la prueba
+
+#### 1. Como Usuario Normal (Reportar una publicación)
+
+1. Inicia sesión en tu aplicación o autentícate en **Swagger** con las credenciales de tu cuenta de usuario normal para obtener su token `Bearer`.
+2. Dirígete al endpoint correspondiente para reportar una propiedad (por ejemplo, `POST /api/properties/{id}/reportes`).
+
+
+3. Envía el reporte especificando el ID de una propiedad existente y el motivo (ej. `"fraude"`). Verás una respuesta exitosa (`201 Created`).
+
+
+
+#### 2. Como Administrador (Revisar el panel)
+
+1. Cierra sesión o cambia el token en **Swagger** por el de tu cuenta **administrador** (asegúrate de que tenga permisos en la tabla `usuario_rol`).
+2. Dirígete a las rutas del panel de administración (ej. `GET /api/admin/reportes`).
+
+
+3. Ejecuta la consulta para comprobar que el panel de administración te devuelve la lista de los reportes pendientes registrados por los usuarios sin ningún tipo de restricción de acceso.
+
+---
+
+¿Te gustaría agregar algún detalle extra a este README o prefieres que lo guardemos directamente en algún archivo del proyecto?
+
 ### Criterios de aceptación y cómo se cumplen
 
 1. **Las rutas verifican explícitamente el rol desde el middleware JWT.** `admin.routes.js` aplica `router.use(authenticateToken, verificarAdministrador)` al inicio: primero el JWT y luego la verificación del rol. Como está a nivel de router, una ruta nueva no puede olvidarlo.
