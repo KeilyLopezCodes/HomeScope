@@ -11,7 +11,8 @@ import FichaPropiedad from '../pages/FichaPropiedad';
 import Catalogo from "../pages/Catalogo";
 import Favoritos from "../pages/Favoritos";
 import Comparador from "../pages/Comparador";
-
+import { ChatProvider } from '../context/ChatContext';
+import Mensajes from '../pages/Mensajes';
 
 // Pantalla temporal para probar que el login funciona. Reemplázala por tu home real.
 function Inicio() {
@@ -25,11 +26,12 @@ function Inicio() {
     </div>
   );
 }
- 
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ChatProvider>
         <Routes>
           <Route path="/" element={<RutaProtegida><Inicio /></RutaProtegida>} />
           <Route path="/login" element={<Login />} />
@@ -42,7 +44,10 @@ export default function App() {
           <Route path="/catalogo" element={<Catalogo />} />
           <Route path="/favoritos" element={<Favoritos/>}/>
           <Route path="/comparador" element={<Comparador/>}/>
+          <Route path="/mensajes" element={<RutaProtegida><Mensajes /></RutaProtegida>} />
+          <Route path="/mensajes/:id" element={<RutaProtegida><Mensajes /></RutaProtegida>} />
         </Routes>
+        </ChatProvider>
       </AuthProvider>
     </BrowserRouter>
   );

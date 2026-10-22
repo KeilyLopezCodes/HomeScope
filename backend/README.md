@@ -302,3 +302,100 @@ Al eliminar una propiedad también se eliminan sus fotos de Cloudinary.
 ```bash
 docker exec -i postgresDB psql -U admin -d HomeScope -c "UPDATE usuario SET correo_verificado = true WHERE correo = 'tu@correo.com';"
 ```
+## Mensajería interna (T30 / T41)
+
+Chat entre comprador y vendedor, siempre ligado a una propiedad. Los mensajes se guardan en PostgreSQL y se entregan en tiempo real con WebSockets (socket.io).
+
+### Dependencias nuevas
+```bash
+cd backend && npm install     # socket.io
+cd frontend && npm install    # socket.io-client
+```
+No hay cambios en la base de datos: usa las tablas `conversacion`, `mensaje` y `notificacion` que ya existen.
+
+### Endpoints (todos requieren `Authorization: Bearer <token>`)
+| Método | Ruta | Qué hace |
+|---|---|---|
+| POST | `/api/conversaciones` | Abre o reutiliza la conversación de una propiedad (`propiedad_id`, `contenido` opcional) |
+| GET | `/api/conversaciones` | Lista mis conversaciones con mensajes sin leer |
+| GET | `/api/conversaciones/:id` | Detalle (solo participantes) |
+| GET | `/api/conversaciones/:id/mensajes` | Mensajes en orden cronológico; marca como leídos los del otro |
+| POST | `/api/conversaciones/:id/mensajes` | Envía un mensaje (máx. 2000 caracteres) |
+
+Documentados en Swagger: `http://localhost:3000/api/docs` → sección **Mensajería**.
+
+### Eventos WebSocket
+El cliente se conecta a `http://localhost:3000` con `auth: { token }`. Eventos que recibe: `mensaje:nuevo`, `notificacion:nueva`, `mensaje:enviado`, `mensajes:leidos`.
+
+### Reglas
+- Una conversación por propiedad y comprador.
+- Solo participan el comprador y el dueño de la propiedad (otros reciben 403).
+- Solo se puede escribir sobre propiedades en estado `publicado`.
+- No se permiten correos ni teléfonos dentro del chat (se rechaza el mensaje).
+- Si se cae la conexión, el cliente reconecta solo y muestra un aviso.
+
+### Cómo probarlo
+1. Levantar base de datos, backend (`npm run dev`) y frontend (`npm run dev`).
+2. Tener dos usuarios y una propiedad `publicado` cuyo dueño sea uno de ellos.
+3. Abrir **dos navegadores distintos** (o uno normal y uno en incógnito): vendedor y comprador. El mismo navegador comparte la sesión.
+4. Comprador: abrir `http://localhost:5173/propiedades/<id>` → **Enviar mensaje al vendedor** → escribir un mensaje.
+5. Vendedor (fuera de `/mensajes`): debe aparecer el aviso "Nuevo mensaje de…" abajo a la derecha, sin recargar.
+6. Responder y comprobar que el comprador lo ve en vivo.
+7. Probar la reconexión: detener el backend y volver a levantarlo; debe aparecer y desaparecer el banner "Reconectando el chat…".
+8. Verificar en BD:
+```bash
+docker exec postgresDB psql -U <DB_USER> -d <DB_NAME> -c "SELECT id,conversacion_id,remitente_id,contenido FROM mensaje ORDER BY id DESC LIMIT 5;"
+```
+
+## Agenda de visitas (T18)
+
+Servicio backend para que el vendedor declare cuándo puede atender visitas y para que el comprador solicite una visita en un horario libre. El vendedor confirma o reprograma, y las dos partes reciben un recordatorio antes de la visita.
+
+### Cambios en la base de datos
+Aplicar la migración (es idempotente, se puede correr varias veces). Una base nueva ya la trae en `init.sql`.
+```bash
+docker cp scripts/migracion_agenda.sql postgresDB:/tmp/migracion_agenda.sql
+docker exec postgresDB psql -U <DB_USER> -d <DB_NAME> -1 -v ON_ERROR_STOP=1 -f /tmp/migracion_agenda.sql
+```
+No hay dependencias nuevas.
+
+### Endpoints (todos requieren `Authorization: Bearer <token>`)
+| Método | Ruta | Quién | Qué hace |
+|---|---|---|---|
+| GET | `/api/disponibilidad` | Vendedor | Mis franjas de disponibilidad |
+| PUT | `/api/disponibilidad` | Vendedor | Define mis horarios (reemplaza las franjas del ámbito) |
+| GET | `/api/visitas/horarios/:propiedadId` | Comprador | Horarios libres de una propiedad |
+| POST | `/api/visitas` | Comprador | Solicita una visita |
+| GET | `/api/visitas` | Ambos | Mis visitas |
+| PATCH | `/api/visitas/:id/confirmar` | Vendedor | Confirma una solicitud |
+| PATCH | `/api/visitas/:id/reprogramar` | Vendedor | Propone otro horario |
+| PATCH | `/api/visitas/:id/aceptar` | Comprador | Acepta el horario reprogramado |
+| PATCH | `/api/visitas/:id/cancelar` | Ambos | Cancela (o rechaza, si el vendedor la descarta) |
+
+Documentados en Swagger: `http://localhost:3000/api/docs` → sección **Agenda**.
+
+### Reglas
+- `dia_semana`: 1 = lunes … 7 = domingo. Horas `HH:MM` en hora de Guatemala.
+- Las franjas pueden ser generales o solo para una propiedad (estas tienen prioridad).
+- Cada visita dura 1 hora y se reserva en horas en punto, con mínimo 2 horas de anticipación y hasta 30 días.
+- Estados: `solicitada` → `confirmada` / `reprogramada` → `confirmada`; también `cancelada` y `rechazada`.
+- No se puede reservar un horario ocupado: dos solicitudes simultáneas no pueden tomar el mismo.
+- Un comprador solo puede tener una visita activa por propiedad. Nadie agenda su propia propiedad.
+- Las respuestas nunca incluyen correo ni teléfono, solo nombres.
+
+### Recordatorios
+Cada minuto el backend busca visitas **confirmadas** que empiecen dentro de las próximas 24 horas (cambia con `REMINDER_HORAS`) y crea una notificación para el comprador y otra para el vendedor. Si hay correo configurado (`EMAIL_USER` y `EMAIL_PASS`), también se envía un correo. Cada recordatorio se envía una sola vez. Con `RECORDATORIO_CORREO=false` solo se notifica en la app.
+
+### Cómo probarlo
+1. Aplicar la migración y reiniciar el backend.
+2. Tener dos usuarios y una propiedad `publicado` cuyo dueño sea el vendedor. En Swagger, usar dos pestañas del navegador con un token distinto en cada una.
+3. **Vendedor:** `PUT /api/disponibilidad` con `{"franjas":[{"dia_semana":4,"hora_inicio":"08:00","hora_fin":"12:00"}]}` (ajustar el día).
+4. **Comprador:** `GET /api/visitas/horarios/<id>`, copiar un `inicio` y hacer `POST /api/visitas` con `{"propiedad_id": <id>, "fecha_hora": "<inicio>"}`. Debe responder 201 con estado `solicitada`.
+5. **Vendedor:** `GET /api/visitas` y `PATCH /api/visitas/<id>/confirmar`.
+6. Probar errores: repetir la solicitud (409), pedir una hora que no está en la lista (400), confirmar como comprador (403).
+7. **Reprogramar:** vendedor `PATCH .../reprogramar` con otra hora de la lista; comprador `PATCH .../aceptar`.
+8. **Recordatorio:** con una visita confirmada, poner `REMINDER_HORAS=720` en `backend/.env`, reiniciar y esperar un minuto. Debe salir en la terminal `[recordatorios] 1 recordatorio(s)...` y verificarse en la base:
+```bash
+docker exec postgresDB psql -U <DB_USER> -d <DB_NAME> -c "SELECT usuario_id,tipo,titulo,enviada_correo FROM notificacion WHERE tipo='recordatorio_visita';"
+```
+Al terminar, volver `REMINDER_HORAS` a 24.
