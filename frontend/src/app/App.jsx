@@ -8,8 +8,8 @@ import NuevaPassword from '../pages/NuevaPassword';
 import Verificado from '../pages/Verificado';
 import FormularioPublicacion from '../components/FormularioPublicacion';
 import FichaPropiedad from '../pages/FichaPropiedad';
-
-// Pantalla temporal para probar que el login funciona. Reemplázala por tu home real.
+import { ChatProvider } from '../context/ChatContext';
+import Mensajes from '../pages/Mensajes';
 function Inicio() {
   const { user, logout } = useAuth();
   return (
@@ -26,6 +26,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ChatProvider>
         <Routes>
           <Route path="/" element={<RutaProtegida><Inicio /></RutaProtegida>} />
           <Route path="/login" element={<Login />} />
@@ -35,7 +36,10 @@ export default function App() {
           <Route path="/verificado" element={<Verificado />} />
           <Route path="/publicar" element={<RutaProtegida><FormularioPublicacion /></RutaProtegida>} />
           <Route path="/propiedades/:id" element={<FichaPropiedad />} />
+          <Route path="/mensajes" element={<RutaProtegida><Mensajes /></RutaProtegida>} />
+          <Route path="/mensajes/:id" element={<RutaProtegida><Mensajes /></RutaProtegida>} />
         </Routes>
+        </ChatProvider>
       </AuthProvider>
     </BrowserRouter>
   );
