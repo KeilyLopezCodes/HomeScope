@@ -9,6 +9,8 @@ const reportRoutes = require('./routes/report.routes');
 const reviewRoutes = require('./routes/review.routes');
 const sellerRoutes = require('./routes/seller.routes');
 const mensajeriaRoutes = require('./routes/mensajeria.routes');
+const disponibilidadRoutes = require('./routes/disponibilidad.routes');
+const visitaRoutes = require('./routes/visita.routes');
 
 const app = express();
 
@@ -33,5 +35,7 @@ app.use('/api/sellers', sellerRoutes);
 app.use('/api/v1', require('./routes/geo-indice.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
 app.use('/api/conversaciones', mensajeriaRoutes);
+app.use('/api/disponibilidad', disponibilidadRoutes);
+app.use('/api/visitas', visitaRoutes);
 
 module.exports = app;
