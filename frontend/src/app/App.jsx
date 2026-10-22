@@ -9,6 +9,15 @@ import Verificado from '../pages/Verificado';
 import FormularioPublicacion from '../components/FormularioPublicacion';
 import FichaPropiedad from '../pages/FichaPropiedad';
 
+// ── Panel administrativo ──
+import RutaAdmin from '../components/RutaAdmin';
+import AdminLayout from '../components/admin/AdminLayout';
+import AdminResumen from '../pages/admin/AdminResumen';
+import AdminReportes from '../pages/admin/AdminReportes';
+import AdminReporteDetalle from '../pages/admin/AdminReporteDetalle';
+import AdminUsuarios from '../pages/admin/AdminUsuarios';
+import AdminAuditoria from '../pages/admin/AdminAuditoria';
+
 // Pantalla temporal para probar que el login funciona. Reemplázala por tu home real.
 function Inicio() {
   const { user, logout } = useAuth();
@@ -35,6 +44,15 @@ export default function App() {
           <Route path="/verificado" element={<Verificado />} />
           <Route path="/publicar" element={<RutaProtegida><FormularioPublicacion /></RutaProtegida>} />
           <Route path="/propiedades/:id" element={<FichaPropiedad />} />
+
+          {/* ── Panel administrativo (sesión + rol administrador) ── */}
+          <Route path="/admin" element={<RutaAdmin><AdminLayout /></RutaAdmin>}>
+            <Route index element={<AdminResumen />} />
+            <Route path="reportes" element={<AdminReportes />} />
+            <Route path="reportes/:id" element={<AdminReporteDetalle />} />
+            <Route path="usuarios" element={<AdminUsuarios />} />
+            <Route path="auditoria" element={<AdminAuditoria />} />
+          </Route>
         </Routes>
       </AuthProvider>
     </BrowserRouter>
