@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { conectar, desconectar, EVENTOS } from '../api/chatSocket';
 import { listarConversaciones } from '../api/chatApi';
+import { contarNoLeidas } from '../api/notificacionApi';
 
 const ChatContext = createContext(null);
 

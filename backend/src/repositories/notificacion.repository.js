@@ -16,6 +16,39 @@ class NotificacionRepositoryPrisma {
   async marcarCorreoEnviado(id) {
     return prisma.notificacion.update({ where: { id }, data: { enviada_correo: true } });
   }
+
+    async listar(usuarioId, { soloNoLeidas = false, limite = 30, pagina = 1 } = {}) {
+    const where = { usuario_id: usuarioId, ...(soloNoLeidas ? { leida: false } : {}) };
+    const [items, total] = await Promise.all([
+      prisma.notificacion.findMany({
+        where, orderBy: { fecha_creacion: 'desc' },
+        take: limite, skip: (pagina - 1) * limite,
+      }),
+      prisma.notificacion.count({ where }),
+    ]);
+    return { items, total };
+  }
+
+  async contarNoLeidas(usuarioId) {
+    return prisma.notificacion.count({ where: { usuario_id: usuarioId, leida: false } });
+  }
+
+  // Solo marca las del propio usuario; devuelve cuántas cambió
+  async marcarLeida(id, usuarioId) {
+    const r = await prisma.notificacion.updateMany({
+      where: { id: BigInt(id), usuario_id: usuarioId, leida: false },
+      data: { leida: true },
+    });
+    return r.count;
+  }
+
+  async marcarTodasLeidas(usuarioId) {
+    const r = await prisma.notificacion.updateMany({
+      where: { usuario_id: usuarioId, leida: false },
+      data: { leida: true },
+    });
+    return r.count;
+  }
 }
 
 module.exports = new NotificacionRepositoryPrisma();
