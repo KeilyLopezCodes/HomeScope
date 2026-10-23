@@ -1,16 +1,12 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const userRepository = require('../repositories/user.repository');
 const { ErrorApp } = require('../utils/errors');
+const { enviarCorreo, escapar } = require('./email.service');
 const {
-  esProduccion,
   JWT_SECRET,
   FRONTEND_URL,
   BACKEND_URL,
-  EMAIL_USER,
-  EMAIL_PASS,
-  correoConfigurado,
   AUTO_VERIFICAR_CORREO,
 } = require('../config/env');
 
@@ -20,35 +16,7 @@ const PASSWORD_MIN = 8;
 const PASSWORD_MAX = 72; // bcrypt ignora lo que pase de 72 bytes
 const CORREO_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const transporter = correoConfigurado
-  ? nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: EMAIL_USER, pass: EMAIL_PASS },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
-    })
-  : null;
-
 const normalizarCorreo = (correo) => String(correo || '').trim().toLowerCase();
-
-const escapar = (texto) =>
-  String(texto).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
-// Envía sin bloquear la respuesta. Sin credenciales (desarrollo) imprime el link en la terminal.
-const enviarCorreo = ({ para, asunto, html, link }) => {
-  if (!transporter) {
-    if (esProduccion) console.error(`[CORREO] Sin EMAIL_USER/EMAIL_PASS: no se envió "${asunto}"`);
-    else console.log(`\n[DEV] "${asunto}" para ${para}\n      ${link}\n`);
-    return;
-  }
-  transporter
-    .sendMail({ from: `"HomeScope" <${EMAIL_USER}>`, to: para, subject: asunto, html })
-    .catch((error) => {
-      console.error(`[CORREO] No se pudo enviar "${asunto}" a ${para}: ${error.message}`);
-      if (!esProduccion) console.log(`[DEV] Link de respaldo: ${link}`);
-    });
-};
 
 const enviarVerificacion = (usuario) => {
   const token = jwt.sign({ id: usuario.id, tipo: 'verificacion' }, JWT_SECRET, { expiresIn: '1d' });
