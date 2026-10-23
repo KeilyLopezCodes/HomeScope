@@ -228,37 +228,33 @@ const updateProperty = async (idProperty, data, userId) => {
   if (updateData.tipo_propiedad_id !== undefined) await validarTipoPropiedad(updateData.tipo_propiedad_id);
   updateData.fecha_actualizacion = new Date();
 
-  const updated = await propertyRepository.update(idProperty, data);
-
-  //recalcular el Índice de Conveniencia si se acaba de publicar o si cambió la ubicación (RF-17)
-  const estaPublicada = String(updated.estado).toLowerCase() === 'publicado';
-  const sePublicoAhora = estaPublicada && String(currentProperty.estado).toLowerCase() !== 'publicado';
-  const cambioUbicacion =
-    (data.latitud !== undefined && Number(data.latitud) !== Number(currentProperty.latitud)) ||
-    (data.longitud !== undefined && Number(data.longitud) !== Number(currentProperty.longitud));
-  if (estaPublicada && (sePublicoAhora || cambioUbicacion)) {
-    geoIndiceService.encolarCalculo(Number(idProperty)); 
-  }
-
-  return updated;
   const cambioPrecio = updateData.precio !== undefined
     && redondearPrecio(updateData.precio) !== redondearPrecio(currentProperty.precio);
 
   // Update + historial en una transacción para no dejar registros huérfanos
-  return await prisma.$transaction(async (tx) => {
-    const updated = await tx.propiedad.update({ where: { id: propertyId }, data: updateData });
+  const updated = await prisma.$transaction(async (tx) => {
+    const actualizada = await tx.propiedad.update({ where: { id: propertyId }, data: updateData });
     if (cambioPrecio) {
-      await tx.historial_precio.create({
-        data: {
-          propiedad_id: propertyId,
-          precio_anterior: currentProperty.precio,
-          precio_nuevo: updateData.precio,
-          cambiado_por: userId
-        }
-      });
+      await priceHistoryRepository.createHistoryRecord({
+        propiedadId: propertyId,
+        precioAnterior: currentProperty.precio,
+        precioNuevo: updateData.precio,
+        cambiadoPor: userId,
+      }, tx);
     }
-    return updated;
+    return actualizada;
   });
+
+  // Recalcular el Índice de Conveniencia si cambió la ubicación de una propiedad publicada (RF-17).
+  // La publicación (borrador -> publicado) se maneja en updatePropertyStatus, no aquí.
+  const cambioUbicacion =
+    (updateData.latitud !== undefined && Number(updateData.latitud) !== Number(currentProperty.latitud)) ||
+    (updateData.longitud !== undefined && Number(updateData.longitud) !== Number(currentProperty.longitud));
+  if (String(updated.estado).toLowerCase() === 'publicado' && cambioUbicacion) {
+    geoIndiceService.encolarCalculo(propertyId);
+  }
+
+  return updated;
 };
 
 const getPropertyHistory = async (idProperty) => {

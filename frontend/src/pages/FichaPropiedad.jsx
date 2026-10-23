@@ -6,6 +6,8 @@ import { formatearPrecio } from '../utils/formatoPrecio';
 import EditarPrecio from '../components/EditarPrecio';
 import { Alerta, enlace } from '../components/AuthUI';
 import BotonContactar from '../components/BotonContactar';
+import GaleriaFotos from '../components/GaleriaFotos';
+import SemaforoIndice from '../components/SemaforoIndice';
 
 const formatearFecha = (fecha) =>
   new Date(fecha).toLocaleString('es-GT', { dateStyle: 'medium', timeStyle: 'short' });
@@ -62,13 +64,10 @@ function Ficha({ id }) {
   }
 
   const esDueno = user?.id === propiedad.vendedor_id;
-  const portada = propiedad.foto_propiedad?.find((f) => f.es_portada) || propiedad.foto_propiedad?.[0];
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6 text-[#222A33]">
-      {portada && (
-        <img src={portada.url} alt={propiedad.titulo} className="aspect-[16/9] w-full rounded-xl object-cover" />
-      )}
+      <GaleriaFotos fotos={propiedad.foto_propiedad} titulo={propiedad.titulo} />
 
       <header className="space-y-1">
         <p className="text-sm text-[#222A33]/60">
@@ -117,6 +116,10 @@ function Ficha({ id }) {
       <section>
         <h2 className="mb-2 text-lg font-semibold">Descripción</h2>
         <p className="whitespace-pre-line text-[#222A33]/80">{propiedad.descripcion}</p>
+      </section>
+            <section aria-label="Índice de conveniencia">
+        <h2 className="mb-3 text-lg font-semibold">Índice de conveniencia</h2>
+        <SemaforoIndice propiedadId={propiedad.id} />
       </section>
 
       <section>

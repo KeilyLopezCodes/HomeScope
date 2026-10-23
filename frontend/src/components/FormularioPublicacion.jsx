@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { publicarPropiedad } from '../api/propertyApi';
 import { guardarBorradorLocal, obtenerBorradorLocal, limpiarBorradorLocal } from '../utils/draftStorage';
 import { GUATEMALA_UBICACIONES } from '../data/guatemalaData';
 import SubidaFotos from './SubidaFotos';
 import { subirFotos } from '../api/fotoApi';
 import { Link } from 'react-router-dom';
 import MapaUbicacion from './MapaUbicacion';
+import { publicarPropiedad, cambiarEstadoPropiedad } from '../api/propertyApi';
 
-export default function FormularioPublicacion() {
+export default function FormularioPublicacion({onCerrar}) {
   const [paso, setPaso] = useState(1);
   const [mensajeExito, setMensajeExito] = useState('');
   const [mensajeError, setMensajeError] = useState('');
@@ -16,6 +16,7 @@ export default function FormularioPublicacion() {
   const [propiedadCreadaId, setPropiedadCreadaId] = useState(null);
   const [fotos, setFotos] = useState([]);
   const [idPublicada, setIdPublicada] = useState(null);
+  const [fotosSubidas, setFotosSubidas] = useState(false);
 
   const {
     register,
@@ -129,13 +130,18 @@ export default function FormularioPublicacion() {
         setPropiedadCreadaId(id);
       }
 
-      if (fotos.length > 0) {
+            if (fotos.length > 0 && !fotosSubidas) {
         setProgreso(0);
         await subirFotos(id, fotos, { onProgress: setProgreso });
+        setFotosSubidas(true);
       }
+
+      // Hasta aquí la propiedad es "borrador"; al pasarla a "publicado" se calcula el índice
+      await cambiarEstadoPropiedad(id, 'publicado');
 
       limpiarBorradorLocal();
       setPropiedadCreadaId(null);
+      setFotosSubidas(false);
       setProgreso(null);
       setMensajeExito('¡Propiedad publicada con éxito!');
       setIdPublicada(id);
@@ -146,7 +152,7 @@ export default function FormularioPublicacion() {
       setProgreso(null);
       setMensajeError(
         id
-          ? `La propiedad se guardó, pero las fotos no se subieron: ${error.message}. Presiona "Publicar Propiedad" para reintentar solo las fotos.`
+          ? `La propiedad se guardó, pero no se pudo completar la publicación: ${error.message}. Presiona "Publicar Propiedad" para reintentar.`
           : error.message || 'Error al guardar en el servidor.'
       );
     }
@@ -220,9 +226,6 @@ export default function FormularioPublicacion() {
                 <select {...register('modalidad')} className="mt-1 w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[#1E4273] focus:outline-none bg-white">
                   <option value="VENTA">Venta</option>
                   <option value="ALQUILER">Alquiler</option>
-                  <option value="OPCION_COMPRA">Alquiler con opción a compra</option>
-                  <option value="CESION_DERECHOS">Cesión de derechos</option>
-                  <option value="SUBARRIENDO">Subarriendo</option>
                 </select>
               </div>
 
@@ -232,6 +235,8 @@ export default function FormularioPublicacion() {
                   <option value="1">Casa</option>
                   <option value="2">Apartamento</option>
                   <option value="3">Terreno / Lote</option>
+                  <option value="4">Local Comercial</option>
+                  <option value="5">Oficina</option>
                 </select>
               </div>
 
@@ -463,6 +468,7 @@ export default function FormularioPublicacion() {
                 {isSubmitting ? 'Publicando...' : 'Publicar Propiedad'}
               </button>
             )}
+            
           </div>
         </div>
       </form>

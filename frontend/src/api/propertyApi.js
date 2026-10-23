@@ -150,4 +150,16 @@ export const subirFotos = (propiedadId, fotos, { onProgress } = {}) =>
     };
     xhr.onerror = () => reject(new Error('No se pudo conectar con el servidor'));
     xhr.send(form);
+});
+
+export async function cambiarEstadoPropiedad(id, estado) {
+  const token = localStorage.getItem('homescope_token');
+  const res = await fetch(`${API_URL}/properties/${id}/estado`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ estado }),
   });
+  const datos = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(datos.message || datos.error || 'No se pudo cambiar el estado.');
+  return datos;
+}

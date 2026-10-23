@@ -1,6 +1,9 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { AuthProvider, useAuth } from '../context/AuthContext';
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { AuthProvider } from '../context/AuthContext';
+import { ChatProvider } from '../context/ChatContext';
 import RutaProtegida from '../components/RutaProtegida';
+import Layout from "../components/Layout";
+
 import Login from '../pages/Login';
 import Registro from '../pages/Registro';
 import Recuperacion from '../pages/Recuperacion';
@@ -11,8 +14,8 @@ import FichaPropiedad from '../pages/FichaPropiedad';
 import Catalogo from "../pages/Catalogo";
 import Favoritos from "../pages/Favoritos";
 import Comparador from "../pages/Comparador";
-import { ChatProvider } from '../context/ChatContext';
 import Mensajes from '../pages/Mensajes';
+import Notificaciones from "../pages/Notificaciones";
 
 // ── Panel administrativo ──
 import RutaAdmin from '../components/RutaAdmin';
@@ -23,48 +26,43 @@ import AdminReporteDetalle from '../pages/admin/AdminReporteDetalle';
 import AdminUsuarios from '../pages/admin/AdminUsuarios';
 import AdminAuditoria from '../pages/admin/AdminAuditoria';
 
-// Pantalla temporal para probar que el login funciona. Reemplázala por tu home real.
-function Inicio() {
-  const { user, logout } = useAuth();
-  return (
-    <div className="p-10">
-      <h1 className="text-2xl font-semibold">Hola, {user?.nombre}</h1>
-      <button onClick={logout} className="mt-4 rounded-lg bg-[#1E4273] px-4 py-2 text-white">
-        Cerrar sesión
-      </button>
-    </div>
-  );
-}
-
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <ChatProvider>
-        <Routes>
-          <Route path="/" element={<RutaProtegida><Inicio /></RutaProtegida>} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/registro" element={<Registro />} />
-          <Route path="/recuperar" element={<Recuperacion />} />
-          <Route path="/nueva-password" element={<NuevaPassword />} />
-          <Route path="/verificado" element={<Verificado />} />
-          <Route path="/publicar" element={<RutaProtegida><FormularioPublicacion /></RutaProtegida>} />
-          <Route path="/propiedades/:id" element={<FichaPropiedad />} />
+          <Routes>
+            {/* Pantallas de acceso: sin menú */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/registro" element={<Registro />} />
+            <Route path="/recuperar" element={<Recuperacion />} />
+            <Route path="/nueva-password" element={<NuevaPassword />} />
+            <Route path="/verificado" element={<Verificado />} />
 
-          {/* ── Panel administrativo (sesión + rol administrador) ── */}
-          <Route path="/admin" element={<RutaAdmin><AdminLayout /></RutaAdmin>}>
-            <Route index element={<AdminResumen />} />
-            <Route path="reportes" element={<AdminReportes />} />
-            <Route path="reportes/:id" element={<AdminReporteDetalle />} />
-            <Route path="usuarios" element={<AdminUsuarios />} />
-            <Route path="auditoria" element={<AdminAuditoria />} />
-          </Route>
-          <Route path="/catalogo" element={<Catalogo />} />
-          <Route path="/favoritos" element={<Favoritos/>}/>
-          <Route path="/comparador" element={<Comparador/>}/>
-          <Route path="/mensajes" element={<RutaProtegida><Mensajes /></RutaProtegida>} />
-          <Route path="/mensajes/:id" element={<RutaProtegida><Mensajes /></RutaProtegida>} />
-        </Routes>
+            {/* Pantallas con menú. Para agregar una: <Route> aquí + enlace en Header.jsx (ENLACES) */}
+            <Route element={<Layout />}>
+              <Route path="/" element={<Catalogo />} />
+              <Route path="/catalogo" element={<Navigate to="/" replace />} />
+              <Route path="/favoritos" element={<Favoritos />} />
+              <Route path="/comparador" element={<Comparador />} />
+              <Route path="/propiedades/:id" element={<FichaPropiedad />} />
+              <Route path="/publicar" element={<RutaProtegida><FormularioPublicacion /></RutaProtegida>} />
+              <Route path="/mensajes" element={<RutaProtegida><Mensajes /></RutaProtegida>} />
+              <Route path="/mensajes/:id" element={<RutaProtegida><Mensajes /></RutaProtegida>} />
+              <Route path="/notificaciones" element={<RutaProtegida><Notificaciones /></RutaProtegida>} />
+            </Route>
+
+            {/* ── Panel administrativo (sesión + rol administrador), con su propio layout ── */}
+            <Route path="/admin" element={<RutaAdmin><AdminLayout /></RutaAdmin>}>
+              <Route index element={<AdminResumen />} />
+              <Route path="reportes" element={<AdminReportes />} />
+              <Route path="reportes/:id" element={<AdminReporteDetalle />} />
+              <Route path="usuarios" element={<AdminUsuarios />} />
+              <Route path="auditoria" element={<AdminAuditoria />} />
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </ChatProvider>
       </AuthProvider>
     </BrowserRouter>
