@@ -8,6 +8,8 @@ import { Alerta, enlace } from '../components/AuthUI';
 import BotonContactar from '../components/BotonContactar';
 import GaleriaFotos from '../components/GaleriaFotos';
 import SemaforoIndice from '../components/SemaforoIndice';
+import ReviewForm from '../components/ReviewForm';
+import Resenas from '../components/Resenas';
 
 const formatearFecha = (fecha) =>
   new Date(fecha).toLocaleString('es-GT', { dateStyle: 'medium', timeStyle: 'short' });
@@ -25,6 +27,10 @@ function Ficha({ id }) {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [mensajeExito, setMensajeExito] = useState('');
+
+  // Se incrementa cada vez que se envía una reseña nueva, para que
+  // <Resenas> vuelva a pedir la lista actualizada al backend.
+  const [resenasVersion, setResenasVersion] = useState(0);
 
   useEffect(() => {
     let activo = true;
@@ -146,6 +152,19 @@ function Ficha({ id }) {
             })}
           </ol>
         )}
+      </section>
+
+      <section aria-label="Reseñas y calificaciones">
+        <h2 className="mb-3 text-lg font-semibold">Reseñas y calificaciones</h2>
+        {!esDueno && (
+          <div className="mb-4">
+            <ReviewForm
+              propiedadId={propiedad.id}
+              onResenaCreada={() => setResenasVersion((v) => v + 1)}
+            />
+          </div>
+        )}
+        <Resenas vendedorId={propiedad.vendedor_id} recargarCuando={resenasVersion} />
       </section>
     </div>
   );
