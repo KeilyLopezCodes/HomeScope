@@ -8,10 +8,10 @@ const pool = new Pool({
 })
 
 const adapter = new PrismaPg(pool)
-const prisma = new PrismaClient({adapter})
+const prisma = new PrismaClient({ adapter, log: ['query'] })
 
 //prisma.$connect()
   //.then(() => console.log('Conexión exitosa a PostgreSQL mediante Prisma ORM'))
   //.catch((err) => console.error('Error de conexión:', err));
-
+require('./verificarBD')(prisma);
 module.exports = prisma;

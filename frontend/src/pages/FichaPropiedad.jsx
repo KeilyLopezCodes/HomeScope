@@ -5,6 +5,14 @@ import { obtenerHistorialPrecio, obtenerPropiedad } from '../api/propertyApi';
 import { formatearPrecio } from '../utils/formatoPrecio';
 import EditarPrecio from '../components/EditarPrecio';
 import { Alerta, enlace } from '../components/AuthUI';
+import BotonContactar from '../components/BotonContactar';
+import BotonReportar from '../components/BotonReportar';
+import GaleriaFotos from '../components/GaleriaFotos';
+import SemaforoIndice from '../components/SemaforoIndice';
+import ReviewForm from '../components/ReviewForm';
+import Resenas from '../components/Resenas';
+import AgendarVisita from '../components/AgendarVisita';
+import { registrarVista } from '../api/panelApi';
 
 const formatearFecha = (fecha) =>
   new Date(fecha).toLocaleString('es-GT', { dateStyle: 'medium', timeStyle: 'short' });
@@ -23,6 +31,10 @@ function Ficha({ id }) {
   const [error, setError] = useState('');
   const [mensajeExito, setMensajeExito] = useState('');
 
+  // Se incrementa cada vez que se envía una reseña nueva, para que
+  // <Resenas> vuelva a pedir la lista actualizada al backend.
+  const [resenasVersion, setResenasVersion] = useState(0);
+
   useEffect(() => {
     let activo = true;
     obtenerPropiedad(id)
@@ -35,6 +47,16 @@ function Ficha({ id }) {
       .finally(() => activo && setCargando(false));
     return () => { activo = false; };
   }, [id]);
+
+  useEffect(() => {
+    if (!propiedad?.id) return;
+    const clave = `vista_${propiedad.id}`;
+    try {
+      if (sessionStorage.getItem(clave)) return;
+      sessionStorage.setItem(clave, '1');
+    } catch { /* sin almacenamiento: se cuenta igual */ }
+    registrarVista(propiedad.id);
+  }, [propiedad?.id]);
 
   const alGuardarPrecio = async (actualizada) => {
     // El precio se refleja de inmediato con la respuesta del backend
@@ -61,13 +83,10 @@ function Ficha({ id }) {
   }
 
   const esDueno = user?.id === propiedad.vendedor_id;
-  const portada = propiedad.foto_propiedad?.find((f) => f.es_portada) || propiedad.foto_propiedad?.[0];
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6 text-[#222A33]">
-      {portada && (
-        <img src={portada.url} alt={propiedad.titulo} className="aspect-[16/9] w-full rounded-xl object-cover" />
-      )}
+      <GaleriaFotos fotos={propiedad.foto_propiedad} titulo={propiedad.titulo} />
 
       <header className="space-y-1">
         <p className="text-sm text-[#222A33]/60">
@@ -80,6 +99,7 @@ function Ficha({ id }) {
             .join(', ')}
         </p>
       </header>
+      {propiedad.estado === 'publicado' && <AgendarVisita propiedad={propiedad} />}
 
       <section className="space-y-3 rounded-xl border border-[#222A33]/10 p-5" aria-label="Precio">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -94,8 +114,14 @@ function Ficha({ id }) {
               onGuardado={alGuardarPrecio}
             />
           )}
+          {!esDueno && <BotonContactar propiedadId={propiedad.id} />}
         </div>
         <Alerta tipo="ok">{mensajeExito}</Alerta>
+        {!esDueno && (
+          <div className="pt-1">
+            <BotonReportar propiedadId={propiedad.id} />
+          </div>
+        )}
       </section>
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -115,6 +141,10 @@ function Ficha({ id }) {
       <section>
         <h2 className="mb-2 text-lg font-semibold">Descripción</h2>
         <p className="whitespace-pre-line text-[#222A33]/80">{propiedad.descripcion}</p>
+      </section>
+            <section aria-label="Índice de conveniencia">
+        <h2 className="mb-3 text-lg font-semibold">Índice de conveniencia</h2>
+        <SemaforoIndice propiedadId={propiedad.id} />
       </section>
 
       <section>
@@ -141,6 +171,19 @@ function Ficha({ id }) {
             })}
           </ol>
         )}
+      </section>
+
+      <section aria-label="Reseñas y calificaciones">
+        <h2 className="mb-3 text-lg font-semibold">Reseñas y calificaciones</h2>
+        {!esDueno && (
+          <div className="mb-4">
+            <ReviewForm
+              propiedadId={propiedad.id}
+              onResenaCreada={() => setResenasVersion((v) => v + 1)}
+            />
+          </div>
+        )}
+        <Resenas vendedorId={propiedad.vendedor_id} recargarCuando={resenasVersion} />
       </section>
     </div>
   );

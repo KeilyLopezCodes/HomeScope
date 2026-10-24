@@ -1,6 +1,5 @@
 const IUserRepository = require('../interfaces/IUser.repository');
 const prisma = require('../config/db');
-const { findById } = require('./property.repository');
 
 class userRepositoryPrisma extends IUserRepository {
     async findByEmail(correo){
@@ -25,10 +24,27 @@ class userRepositoryPrisma extends IUserRepository {
             }
         });
     }
+    
+    async findAuthById(id) {
+        return await prisma.usuario.findUnique({ 
+            where: { id: Number(id) } });
+    }
+
     async create(userData){
         return await prisma.usuario.create({
             data: userData
         });
+    }
+    // Los roles son acumulativos: basta con que uno de los roles del usuario tenga el permiso
+    async hasPermission(id, codigoPermiso) {
+        const permiso = await prisma.rol_permiso.findFirst({
+            where: {
+                permiso: { codigo: codigoPermiso },
+                rol: { usuario_rol: { some: { usuario_id: Number(id) } } }
+            },
+            select: { permiso_id: true }
+        });
+        return !!permiso;
     }
     async update(id, data) {
     return await prisma.usuario.update({
