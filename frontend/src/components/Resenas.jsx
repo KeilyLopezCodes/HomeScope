@@ -1,5 +1,6 @@
 // Muestra el promedio de calificación y la lista de comentarios recibidos
-// por un VENDEDOR (GET /sellers/:id/reviews). Se usa en la ficha de propiedd
+// por un VENDEDOR (GET /sellers/:id/reviews). Se usa en la ficha de
+// propiedad y en el perfil del vendedor — solo recibe el vendedorId.
 
 import { useEffect, useState } from "react";
 import { obtenerResenasVendedor } from "../api/reviewApi";
@@ -60,7 +61,7 @@ export default function Resenas({ vendedorId, recargarCuando }) {
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-1">
         <Estrellas valor={promedio} />
         <span className="text-sm font-semibold text-[#222A33]">
           {promedio > 0 ? promedio.toFixed(1) : "Sin calificar"}
@@ -69,6 +70,10 @@ export default function Resenas({ vendedorId, recargarCuando }) {
           ({total} {total === 1 ? "reseña" : "reseñas"})
         </span>
       </div>
+
+      <p className="text-xs text-gray-400 mb-4">
+        Reputación del vendedor: estas reseñas son de todas sus propiedades, no solo de esta.
+      </p>
 
       {resenas.length === 0 ? (
         <p className="text-sm text-gray-500">Todavía no hay reseñas para este vendedor.</p>
