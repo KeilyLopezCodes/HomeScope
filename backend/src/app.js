@@ -38,5 +38,7 @@ app.use('/api/conversaciones', mensajeriaRoutes);
 app.use('/api/disponibilidad', disponibilidadRoutes);
 app.use('/api/visitas', visitaRoutes);
 app.use('/api/notificaciones', require('./routes/notificacion.routes'));
+app.use('/api', require('./routes/analitica.routes'));
+app.use('/api/favoritos', require('./routes/favorito.routes'));
 
 module.exports = app;

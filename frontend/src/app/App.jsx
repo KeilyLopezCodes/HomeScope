@@ -16,6 +16,8 @@ import Favoritos from "../pages/Favoritos";
 import Comparador from "../pages/Comparador";
 import Mensajes from '../pages/Mensajes';
 import Notificaciones from "../pages/Notificaciones";
+import MisVisitas from "../pages/MisVisitas";
+import PanelVendedor from "../pages/PanelVendedor";
 
 // ── Panel administrativo ──
 import RutaAdmin from '../components/RutaAdmin';
@@ -50,6 +52,8 @@ export default function App() {
               <Route path="/mensajes" element={<RutaProtegida><Mensajes /></RutaProtegida>} />
               <Route path="/mensajes/:id" element={<RutaProtegida><Mensajes /></RutaProtegida>} />
               <Route path="/notificaciones" element={<RutaProtegida><Notificaciones /></RutaProtegida>} />
+              <Route path="/visitas" element={<RutaProtegida><MisVisitas /></RutaProtegida>} />
+              <Route path="/panel" element={<RutaProtegida><PanelVendedor /></RutaProtegida>} />
             </Route>
 
             {/* ── Panel administrativo (sesión + rol administrador), con su propio layout ── */}

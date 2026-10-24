@@ -16,7 +16,8 @@ const ENLACES = [
   { to: "/mensajes", texto: "Mensajes", contador: "mensajes", soloAutenticado: true },
   { to: "/publicar", texto: "Publicar", soloAutenticado: true },
   { to: "/notificaciones", texto: "Notificaciones", contador: "notificaciones", soloAutenticado: true },
-  // { to: "/visitas", texto: "Visitas", soloAutenticado: true },
+  { to: "/visitas", texto: "Visitas", soloAutenticado: true },
+  { to: "/panel", texto: "Mi panel", soloAutenticado: true },
   // { to: "/admin", texto: "Administración", soloAutenticado: true },
 ];
 

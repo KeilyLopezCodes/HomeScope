@@ -11,6 +11,8 @@ import GaleriaFotos from '../components/GaleriaFotos';
 import SemaforoIndice from '../components/SemaforoIndice';
 import ReviewForm from '../components/ReviewForm';
 import Resenas from '../components/Resenas';
+import AgendarVisita from '../components/AgendarVisita';
+import { registrarVista } from '../api/panelApi';
 
 const formatearFecha = (fecha) =>
   new Date(fecha).toLocaleString('es-GT', { dateStyle: 'medium', timeStyle: 'short' });
@@ -45,6 +47,16 @@ function Ficha({ id }) {
       .finally(() => activo && setCargando(false));
     return () => { activo = false; };
   }, [id]);
+
+  useEffect(() => {
+    if (!propiedad?.id) return;
+    const clave = `vista_${propiedad.id}`;
+    try {
+      if (sessionStorage.getItem(clave)) return;
+      sessionStorage.setItem(clave, '1');
+    } catch { /* sin almacenamiento: se cuenta igual */ }
+    registrarVista(propiedad.id);
+  }, [propiedad?.id]);
 
   const alGuardarPrecio = async (actualizada) => {
     // El precio se refleja de inmediato con la respuesta del backend
@@ -87,6 +99,7 @@ function Ficha({ id }) {
             .join(', ')}
         </p>
       </header>
+      {propiedad.estado === 'publicado' && <AgendarVisita propiedad={propiedad} />}
 
       <section className="space-y-3 rounded-xl border border-[#222A33]/10 p-5" aria-label="Precio">
         <div className="flex flex-wrap items-center justify-between gap-3">
