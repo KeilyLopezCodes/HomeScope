@@ -6,6 +6,7 @@ import { formatearPrecio } from '../utils/formatoPrecio';
 import EditarPrecio from '../components/EditarPrecio';
 import { Alerta, enlace } from '../components/AuthUI';
 import BotonContactar from '../components/BotonContactar';
+import BotonReportar from '../components/BotonReportar';
 import GaleriaFotos from '../components/GaleriaFotos';
 import SemaforoIndice from '../components/SemaforoIndice';
 import ReviewForm from '../components/ReviewForm';
@@ -116,6 +117,11 @@ function Ficha({ id }) {
           {!esDueno && <BotonContactar propiedadId={propiedad.id} />}
         </div>
         <Alerta tipo="ok">{mensajeExito}</Alerta>
+        {!esDueno && (
+          <div className="pt-1">
+            <BotonReportar propiedadId={propiedad.id} />
+          </div>
+        )}
       </section>
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
