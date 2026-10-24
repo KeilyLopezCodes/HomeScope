@@ -14,11 +14,15 @@ export function ChatProvider({ children }) {
   const location = useLocation();
   const [estado, setEstado] = useState('desconectado');
   const [noLeidos, setNoLeidos] = useState(0);
+  const [notifNoLeidas, setNotifNoLeidas] = useState(0);
   // toast: { titulo, subtitulo?, detalle, ruta? }  (ruta = a dónde lleva al tocarlo; sin ruta solo se cierra)
   const [toast, setToast] = useState(null);
   const suscriptores = useRef(new Set());
   const ubicacion = useRef(location.pathname);
   const temporizador = useRef(null);
+  const refrescarNotificaciones = useCallback(async () => {
+    try { setNotifNoLeidas((await contarNoLeidas()).no_leidas); } catch { /* secundario */ }
+  }, []);
 
   useEffect(() => { ubicacion.current = location.pathname; }, [location.pathname]);
 
