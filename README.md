@@ -3,6 +3,20 @@
 Plataforma web para publicar, buscar y gestionar propiedades en venta o alquiler. Incluye un **índice de conveniencia** por zona (lugares cercanos), chat en tiempo real entre comprador y vendedor, agenda de visitas, panel del vendedor con estadísticas, moderación y verificación de vendedores.
 
 ---
+## Integrantes del grupo
+ 
+| Nombre | Carnet |
+|---|---|
+| Christian Eduardo López Lémus | 0907-23-15408 |
+| Cristian Eduardo Chamo Morales | 0907-23-11907 |
+| Delmy María Fajardo Borrayo | 0907-23-11346 |
+| Keily Atalia López Hernández | 0907-23-21839 |
+| María José del Carmen Portillo López | 0907-23-4166 |
+| Astrid Mileidy Peña Polanco | 0907-23-5304 |
+ 
+**Linear:** https://linear.app/homescope/team/HOM/overview
+ 
+---
 
 ## Tabla de contenido
 
