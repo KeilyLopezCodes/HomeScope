@@ -23,7 +23,7 @@ const AYUDA_ESTADO = {
 
 const portadaDe = (p) => p.foto_propiedad?.find((f) => f.es_portada) ?? p.foto_propiedad?.[0];
 
-export default function MisPropiedades() {
+export default function MisPropiedades({ incrustado = false }) {
   const [lista, setLista] = useState(null);
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
@@ -77,11 +77,17 @@ export default function MisPropiedades() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6 text-[#222A33]">
+        <div className={incrustado ? 'space-y-6 text-[#222A33]' : 'mx-auto max-w-4xl space-y-6 p-6 text-[#222A33]'}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Mis propiedades</h1>
-          <p className="text-sm text-[#222A33]/60">Edita tus publicaciones, cambia su estado o márcalas como vendidas.</p>
+          {incrustado ? (
+            <p className="text-sm text-[#222A33]/60">Edita tus publicaciones, cambia su estado o márcalas como vendidas.</p>
+          ) : (
+            <>
+              <h1 className="text-2xl font-semibold tracking-tight">Mis propiedades</h1>
+              <p className="text-sm text-[#222A33]/60">Edita tus publicaciones, cambia su estado o márcalas como vendidas.</p>
+            </>
+          )}
         </div>
         <Link to="/publicar" className="rounded-lg bg-[#1E4273] px-4 py-2 text-sm font-semibold text-white hover:bg-[#163156]">
           + Publicar propiedad

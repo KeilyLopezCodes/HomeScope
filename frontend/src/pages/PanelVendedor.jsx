@@ -2,10 +2,13 @@ import { Link, useSearchParams } from 'react-router-dom';
 import PanelEstadisticas from '../components/PanelEstadisticas';
 import ListaVisitas from '../components/ListaVisitas';
 import EditorDisponibilidad from '../components/EditorDisponibilidad';
+import MisPropiedades from './MisPropiedades';
 
 const PESTANAS = [
   { id: 'resumen', texto: 'Resumen' },
+  { id: 'propiedades', texto: 'Mis propiedades' },
   { id: 'visitas', texto: 'Visitas recibidas' },
+  { id: 'mis-visitas', texto: 'Mis visitas' },
   { id: 'disponibilidad', texto: 'Disponibilidad' },
 ];
 
@@ -35,7 +38,14 @@ export default function PanelVendedor() {
       </div>
 
       {tab === 'resumen' && <PanelEstadisticas />}
+      {tab === 'propiedades' && <MisPropiedades incrustado />}
       {tab === 'visitas' && <ListaVisitas rol="vendedor" />}
+      {tab === 'mis-visitas' && (
+        <div className="space-y-3">
+          <p className="text-sm text-slate-500">Las visitas que pediste a propiedades de otros vendedores.</p>
+          <ListaVisitas rol="comprador" />
+        </div>
+      )}
       {tab === 'disponibilidad' && <EditorDisponibilidad />}
     </div>
   );
