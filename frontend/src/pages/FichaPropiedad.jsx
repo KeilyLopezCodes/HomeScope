@@ -13,6 +13,7 @@ import ReviewForm from '../components/ReviewForm';
 import Resenas from '../components/Resenas';
 import AgendarVisita from '../components/AgendarVisita';
 import { registrarVista } from '../api/panelApi';
+import MapaFicha from '../components/MapaFicha';
 
 const formatearFecha = (fecha) =>
   new Date(fecha).toLocaleString('es-GT', { dateStyle: 'medium', timeStyle: 'short' });
@@ -141,6 +142,15 @@ function Ficha({ id }) {
       <section>
         <h2 className="mb-2 text-lg font-semibold">Descripción</h2>
         <p className="whitespace-pre-line text-[#222A33]/80">{propiedad.descripcion}</p>
+      </section>
+            <section aria-label="Ubicación">
+        <h2 className="mb-2 text-lg font-semibold">Ubicación</h2>
+        <p className="mb-3 text-sm text-[#222A33]/70">
+          {[propiedad.direccion, propiedad.zona && `Zona ${propiedad.zona}`, propiedad.municipio, propiedad.departamento]
+            .filter(Boolean)
+            .join(', ')}
+        </p>
+        <MapaFicha latitud={propiedad.latitud} longitud={propiedad.longitud} titulo={propiedad.titulo} />
       </section>
             <section aria-label="Índice de conveniencia">
         <h2 className="mb-3 text-lg font-semibold">Índice de conveniencia</h2>

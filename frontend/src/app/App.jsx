@@ -15,6 +15,7 @@ import Catalogo from "../pages/Catalogo";
 import Favoritos from "../pages/Favoritos";
 import Comparador from "../pages/Comparador";
 import Mensajes from '../pages/Mensajes';
+import MisPropiedades from "../pages/MisPropiedades";
 import Notificaciones from "../pages/Notificaciones";
 import MisVisitas from "../pages/MisVisitas";
 import PanelVendedor from "../pages/PanelVendedor";
@@ -51,6 +52,7 @@ export default function App() {
               <Route path="/publicar" element={<RutaProtegida><FormularioPublicacion /></RutaProtegida>} />
               <Route path="/mensajes" element={<RutaProtegida><Mensajes /></RutaProtegida>} />
               <Route path="/mensajes/:id" element={<RutaProtegida><Mensajes /></RutaProtegida>} />
+              <Route path="/mis-propiedades" element={<RutaProtegida><MisPropiedades /></RutaProtegida>} />
               <Route path="/notificaciones" element={<RutaProtegida><Notificaciones /></RutaProtegida>} />
               <Route path="/visitas" element={<RutaProtegida><MisVisitas /></RutaProtegida>} />
               <Route path="/panel" element={<RutaProtegida><PanelVendedor /></RutaProtegida>} />
