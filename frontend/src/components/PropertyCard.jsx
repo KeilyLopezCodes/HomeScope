@@ -10,6 +10,11 @@ export default function PropertyCard({ propiedad, mostrarComparar = false }) {
   const foto = obtenerFotoPortada(propiedad);
   const indice = obtenerIndiceVigente(propiedad);
   const badge = colorIndice(indice);
+  // Etiqueta de la modalidad (el valor viene de la base de datos tal cual)
+  const MODALIDADES = {
+    VENTA: { texto: "Venta", clase: "bg-slate-100 text-slate-700 ring-1 ring-slate-200" },
+    ALQUILER: { texto: "Alquiler", clase: "bg-violet-50 text-violet-700 ring-1 ring-violet-200" },
+  };
 
   const { esFavorito, toggleFavorito } = useFavoritos();
   const { estaSeleccionado, toggleComparar, seleccionados, MAX_COMPARAR } = useComparador();
@@ -48,6 +53,11 @@ export default function PropertyCard({ propiedad, mostrarComparar = false }) {
           <Link to={`/propiedades/${id}`} className="hover:underline">{titulo}</Link>
         </h3>
         <p className="text-xs text-gray-500 mb-3">{zona}, {municipio}</p>
+        {MODALIDADES[propiedad.modalidad] && (
+          <span className={`mb-2 inline-block self-start rounded-full px-2.5 py-0.5 text-xs font-semibold ${MODALIDADES[propiedad.modalidad].clase}`}>
+            {MODALIDADES[propiedad.modalidad].texto}
+          </span>
+        )}
         <p className="text-lg font-bold text-[#1E4273] mb-3">{formatearPrecio(precio, moneda)}</p>
 
         {mostrarComparar && (

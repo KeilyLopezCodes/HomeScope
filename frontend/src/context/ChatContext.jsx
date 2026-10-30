@@ -7,7 +7,6 @@ import { contarNoLeidas } from '../api/notificacionApi';
 
 const ChatContext = createContext(null);
 
-// Debe ir DENTRO de <BrowserRouter> y de <AuthProvider>
 export function ChatProvider({ children }) {
   const { token, user } = useAuth();
   const navigate = useNavigate();
