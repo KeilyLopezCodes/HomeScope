@@ -1,5 +1,6 @@
 // Piezas reutilizables para todas las pantallas de auth.
 // Paleta de colores HomeScope:  azul #1E4273 · verde #2E9E6B · oscuro #222A33 · blanco #FFFFFF
+import { useId, useState } from 'react';
 import logo from '../assets/logo.png';
 
 const ENCENDIDAS = new Set([2, 7, 9, 14, 19, 22, 26, 31, 34]);
@@ -44,15 +45,46 @@ export function AuthLayout({ titulo, subtitulo, children, pie }) {
   );
 }
 
-export function Campo({ etiqueta, ...props }) {
+// Los campos de tipo "password" llevan un botón (ojo) para ver lo que se escribe.
+export function Campo({ etiqueta, id, ...props }) {
+  const idAuto = useId();
+  const idCampo = id ?? idAuto;
+  const [visible, setVisible] = useState(false);
+  const esPassword = props.type === 'password';
+
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-[#222A33]">{etiqueta}</span>
-      <input
-        {...props}
-        className="w-full rounded-lg border border-[#222A33]/25 bg-white px-3.5 py-2.5 text-[#222A33] placeholder:text-[#222A33]/40 focus:border-[#1E4273] focus:outline-none focus:ring-2 focus:ring-[#1E4273]/25"
-      />
-    </label>
+    <div className="block">
+      <label htmlFor={idCampo} className="mb-1.5 block text-sm font-medium text-[#222A33]">{etiqueta}</label>
+      <div className="relative">
+        <input
+          {...props}
+          id={idCampo}
+          type={esPassword && visible ? 'text' : props.type}
+          className={`w-full rounded-lg border border-[#222A33]/25 bg-white px-3.5 py-2.5 text-[#222A33] placeholder:text-[#222A33]/40 focus:border-[#1E4273] focus:outline-none focus:ring-2 focus:ring-[#1E4273]/25 ${esPassword ? 'pr-11' : ''}`}
+        />
+        {esPassword && (
+          <button
+            type="button"
+            onClick={() => setVisible((v) => !v)}
+            aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            aria-pressed={visible}
+            title={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-[#222A33]/55 hover:text-[#1E4273] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4273]"
+          >
+            {visible ? (
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 5.1A9.8 9.8 0 0112 5c5 0 9 4.5 10 7-.4 1-1.2 2.3-2.4 3.5M6.6 6.6C4.4 8 2.7 10.2 2 12c1 2.5 5 7 10 7 1.5 0 2.9-.4 4.1-1" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <path d="M2 12c1-2.5 5-7 10-7s9 4.5 10 7c-1 2.5-5 7-10 7S3 14.5 2 12z" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
