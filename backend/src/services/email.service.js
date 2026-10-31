@@ -3,7 +3,9 @@ const { esProduccion, EMAIL_USER, EMAIL_PASS, correoConfigurado } = require('../
 
 const transporter = correoConfigurado
   ? nodemailer.createTransport({
-      service: 'gmail',
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: Number(process.env.EMAIL_PORT) || 465,
+      secure: Number(process.env.EMAIL_PORT || 465) === 465,
       auth: { user: EMAIL_USER, pass: EMAIL_PASS },
       connectionTimeout: 10000,
       greetingTimeout: 10000,
@@ -26,7 +28,8 @@ const enviarCorreo = async ({ para, asunto, html, link, texto }) => {
     return false;
   }
   try {
-    await transporter.sendMail({ from: `"HomeScope" <${EMAIL_USER}>`, to: para, subject: asunto, html });
+    await transporter.sendMail({ from: `"HomeScope" <${process.env.EMAIL_FROM || EMAIL_USER}>`, to: para, subject: asunto, html });
+    await transporter.sendMail({ from: `"HomeScope" <${process.env.EMAIL_FROM || EMAIL_USER}>`, to: para, subject: asunto, html });
     return true;
   } catch (error) {
     console.error(`[CORREO] No se pudo enviar "${asunto}" a ${para}: ${error.message}`);
